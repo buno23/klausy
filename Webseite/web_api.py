@@ -4,7 +4,7 @@ Start: python web_api.py
 Dann: http://localhost:5000
 """
 
-import os, sys, json, threading, datetime, uuid, re, hashlib
+import os, sys, json, threading, datetime, uuid, re, hashlib, secrets
 from flask import Flask, request, jsonify, send_from_directory, Response, make_response
 from flask_cors import CORS
 
@@ -93,28 +93,64 @@ def parse_tools_from_help():
 ALL_TOOLS = parse_tools_from_help()
 
 # ═══════════════════════════════════════════
-# PASSWORDSCHUTZ
+# PASSWORDSCHUTZ & SICHERHEIT
 # ═══════════════════════════════════════════
 PASSWORD_FILE = os.path.join(SCRIPT_DIR, ".webpass")
-AUTH_COOKIE = "klausy_auth"
+AUTH_COOKIE = "klausy_session"
+
+# Session-Tokens: {token: True} – sicherer als Passwort im Cookie
+auth_tokens = {}
+auth_tokens_lock = threading.Lock()
+
+# Rate-Limiting: {ip: [timestamp, ...]}
+login_attempts = {}
+login_attempts_lock = threading.Lock()
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SEC = 60
+
 
 def get_stored_password():
     """Hole Passwort: 1. .webpass-Datei, 2. WEB_PASSWORD env var."""
-    # Datei hat Vorrang
     if os.path.exists(PASSWORD_FILE):
         with open(PASSWORD_FILE, "r", encoding="utf-8") as f:
             return f.read().strip()
-    # Fallback: Environment-Variable
     env_pw = os.environ.get("WEB_PASSWORD")
     if env_pw:
         return env_pw
     return None
 
-def check_password(input_pw):
-    stored = get_stored_password()
-    if not stored:
-        return True  # kein Passwort gesetzt = frei
-    return input_pw == stored
+
+def is_rate_limited():
+    """Prüfe Rate-Limit für die aktuelle IP."""
+    ip = request.remote_addr or "unknown"
+    now = datetime.datetime.now().timestamp()
+    with login_attempts_lock:
+        if ip not in login_attempts:
+            login_attempts[ip] = []
+        # Alte Einträge aufräumen
+        login_attempts[ip] = [t for t in login_attempts[ip] if now - t < LOGIN_WINDOW_SEC]
+        if len(login_attempts[ip]) >= MAX_LOGIN_ATTEMPTS:
+            return True
+        login_attempts[ip].append(now)
+    return False
+
+
+def generate_session_token():
+    """Erzeuge einen sicheren, zufälligen Session-Token."""
+    return secrets.token_hex(32)
+
+
+@app.after_request
+def add_security_headers(response):
+    """Sicherheits-Header zu jeder Antwort hinzufügen."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
+
 
 PASSWORD_HTML = """<!DOCTYPE html>
 <html lang="de">
@@ -134,6 +170,7 @@ body{background:#0d0d0d;color:#d4d4d4;font-family:Inter,-apple-system,sans-serif
 .w button:hover{background:#d4783a}
 .w button:disabled{opacity:.5;cursor:wait}
 .w .e{color:#c44;font-size:.78rem;margin-top:10px;display:none}
+.w .rl{color:#c44;font-size:.72rem;margin-top:10px;display:none}
 </style>
 </head>
 <body>
@@ -143,15 +180,20 @@ body{background:#0d0d0d;color:#d4d4d4;font-family:Inter,-apple-system,sans-serif
 <input type="password" id="pw" autocomplete="off" onkeydown="if(event.key==='Enter')login()">
 <button id="btn" onclick="login()">Anmelden</button>
 <div class="e" id="err">Falsches Passwort</div>
+<div class="rl" id="rl">Zu viele Fehlversuche. Bitte warte eine Minute.</div>
 </div>
 <script>
 function login(){
-  var pw=document.getElementById('pw'),btn=document.getElementById('btn'),err=document.getElementById('err');
+  var pw=document.getElementById('pw'),btn=document.getElementById('btn'),err=document.getElementById('err'),rl=document.getElementById('rl');
   if(!pw.value.trim())return;
-  btn.disabled=true;btn.textContent='Anmelden...';err.style.display='none';
+  btn.disabled=true;btn.textContent='Anmelden...';err.style.display='none';rl.style.display='none';
   fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pw:pw.value})})
   .then(function(r){return r.json()})
-  .then(function(d){if(d.ok){window.location.href='/';}else{err.style.display='block';btn.disabled=false;btn.textContent='Anmelden';pw.value='';pw.focus();}})
+  .then(function(d){
+    if(d.ok){window.location.href='/';}
+    else if(d.rate_limit){rl.style.display='block';btn.disabled=false;btn.textContent='Anmelden';}
+    else{err.style.display='block';btn.disabled=false;btn.textContent='Anmelden';pw.value='';pw.focus();}
+  })
   .catch(function(){err.textContent='Verbindungsfehler';err.style.display='block';btn.disabled=false;btn.textContent='Anmelden';});
 }
 window.addEventListener('load',function(){setTimeout(function(){document.getElementById('pw').focus()},150)});
@@ -159,20 +201,23 @@ window.addEventListener('load',function(){setTimeout(function(){document.getElem
 </body>
 </html>"""
 
+
 @app.before_request
 def check_auth():
     """Prüfe Authentifizierung vor jeder Anfrage."""
     stored = get_stored_password()
     if not stored:
         return None  # kein Passwort = frei
-    # Login-Endpunkt immer erlauben
-    if request.path == "/api/auth":
+    # Login & Logout immer erlauben
+    if request.path in ("/api/auth", "/api/logout"):
         return None
-    # Cookie prüfen
+    # Session-Token im Cookie prüfen
     token = request.cookies.get(AUTH_COOKIE)
-    if token and token == stored:
-        return None
-    # API-Aufrufe (außer Login) → 401
+    if token:
+        with auth_tokens_lock:
+            if token in auth_tokens:
+                return None
+    # API-Aufrufe (außer Login/Logout) → 401
     if request.path.startswith("/api/"):
         return jsonify({"error": "Nicht autorisiert."}), 401
     # Alles andere → Login-Seite
@@ -187,14 +232,35 @@ def check_auth():
 
 @app.route("/api/auth", methods=["POST"])
 def auth():
-    """Passwortprüfung. Bei Erfolg Cookie setzen."""
+    """Passwortprüfung. Bei Erfolg Session-Token im Cookie."""
     data = request.get_json(silent=True) or {}
     pw = data.get("pw", "")
-    if check_password(pw):
+    stored = get_stored_password()
+
+    # Prüfe Rate-Limit
+    if is_rate_limited():
+        return jsonify({"ok": False, "rate_limit": True})
+
+    if stored and pw == stored:
+        token = generate_session_token()
+        with auth_tokens_lock:
+            auth_tokens[token] = True
         resp = jsonify({"ok": True})
-        resp.set_cookie(AUTH_COOKIE, pw, max_age=None, httponly=True, samesite="Lax")
+        resp.set_cookie(AUTH_COOKIE, token, max_age=None, httponly=True, samesite="Lax", secure=False)
         return resp
     return jsonify({"ok": False})
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    """Session-Token löschen = ausloggen."""
+    token = request.cookies.get(AUTH_COOKIE)
+    if token:
+        with auth_tokens_lock:
+            auth_tokens.pop(token, None)
+    resp = jsonify({"ok": True})
+    resp.set_cookie(AUTH_COOKIE, "", max_age=0, httponly=True, samesite="Lax")
+    return resp
 
 @app.route("/")
 def index():

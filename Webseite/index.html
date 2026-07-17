@@ -257,6 +257,7 @@ a{color:var(--ac2);text-decoration:none}
   <div class="lo" style="gap:4px"><img src="klausy-logo.jpeg" alt="Klausy" style="height:40px;opacity:.9"> <span style="font-weight:600;font-size:.9rem;color:#fff">Klausy</span></div>
   <ul class="nl">
     <li class="dn"><span class="st" onclick="showPwOverlay()" title="Klicken für Passwort"><span class="dot" id="statusDot"></span><span id="statusLabel">Initialisiere...</span></span></li>
+    <li><a onclick="logout()" title="Abmelden" style="cursor:pointer;color:var(--tx3)"><i class="fas fa-sign-out-alt"></i></a></li>
     <li><a href="#juniorakademie">Akademie</a></li>
     <li><a href="#tools">Tools</a></li>
     <li><a href="#chat">Chat</a></li>
@@ -463,8 +464,9 @@ a{color:var(--ac2);text-decoration:none}
     der <a href="https://www.humboldt-auf-scharfenberg.de/" target="_blank">JuniorAkademie Berlin „Humboldt auf Scharfenberg“</a><br>
     <span style="font-size:.65rem;color:var(--tx3)">Ein Angebot des Landes Berlin zur Förderung besonders begabter Schüler:innen der Klassen 7–10</span>
   </div>
-  <div style="margin-top:12px;font-size:.65rem;color:var(--tx3)">
+  <div style="margin-top:12px;font-size:.65rem;color:var(--tx3);display:flex;gap:16px;justify-content:center">
     <a href="#" onclick="st()" style="color:var(--tx2)">Nach oben</a>
+    <a href="#" onclick="logout()" style="color:var(--tx3)"><i class="fas fa-sign-out-alt"></i> Abmelden</a>
   </div>
 </footer>
 
@@ -630,6 +632,14 @@ function submitPw(){
 function setStatus(ok,label){
   document.getElementById('statusDot').className='dot'+(ok===true?' ok':ok===false?' er':'');
   document.getElementById('statusLabel').textContent=label||(ok===true?'Online':ok===false?'Offline':'Initialisiere...');
+}
+
+// ─── LOGOUT ───
+function logout(){
+  if(!confirm('Wirklich abmelden? Du musst dann das Passwort neu eingeben.'))return;
+  fetch('/api/logout',{method:'POST'}).then(r=>r.json()).then(d=>{
+    if(d.ok)location.reload();
+  }).catch(()=>{});
 }
 
 // ─── MESSAGES ───
