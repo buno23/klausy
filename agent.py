@@ -167,6 +167,29 @@ def search_web(query):
         return f"Fehler bei der Suche: {e}"
 
 
+def safe_fetch(url, timeout=15, json_mode=False, headers=None):
+    """Sichere HTTP-Anfrage mit Encoding-Erkennung."""
+    if headers is None:
+        headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        resp = requests.get(url, timeout=timeout, headers=headers)
+        resp.raise_for_status()
+        if resp.encoding and resp.encoding.lower() not in ("utf-8", "utf8"):
+            resp.encoding = resp.apparent_encoding
+        if json_mode:
+            return resp.json()
+        return resp.text
+    except requests.exceptions.JSONDecodeError:
+        return resp.text if not json_mode else {"error": "Ungültiges JSON"}
+    except Exception as e:
+        return f"Fehler: {e}" if not json_mode else {"error": str(e)}
+
+
+def safe_fetch_json(url, timeout=15, headers=None):
+    """Wie safe_fetch, aber gibt dict zurück."""
+    return safe_fetch(url, timeout=timeout, json_mode=True, headers=headers)
+
+
 def browse_url(url):
     if not urlparse(url).scheme:
         url = "http://" + url
@@ -200,6 +223,8 @@ def fetch_html(url):
             headers={"User-Agent": "Mozilla/5.0"},
         )
         response.raise_for_status()
+        if response.encoding and response.encoding.lower() not in ("utf-8", "utf8"):
+            response.encoding = response.apparent_encoding
         return response.text, response.url
     except Exception as e:
         raise RuntimeError(f"Fehler beim Abrufen der URL: {e}")
@@ -2470,7 +2495,6 @@ def handle_tool_command(command, argument):
 def translate_text(text, lang_part=None):
     if not text:
         return "Bitte gib einen Text zum Übersetzen an."
-    # default target German
     target = "de"
     source = "auto"
     if lang_part:
@@ -2480,18 +2504,63 @@ def translate_text(text, lang_part=None):
             target = tgt.strip()
         else:
             target = lang_part.strip()
+
+    # Mehrere Übersetzungs-Backends (Fallback-Kette)
+    backends = [
+        # 1. LibreTranslate (öffentliche Instanz)
+        ("libre", lambda: _translate_libre(text, source, target)),
+        # 2. MyMemory (mit Rate-Limit)
+        ("mymemory", lambda: _translate_mymemory(text, source, target)),
+    ]
+
+    errors = []
+    for name, fn in backends:
+        try:
+            result = fn()
+            if result:
+                return result
+        except Exception as e:
+            errors.append(f"{name}: {e}")
+            continue
+
+    return f"❌ Übersetzung fehlgeschlagen. {'; '.join(errors)}"
+
+
+def _translate_libre(text, source, target):
+    """LibreTranslate (öffentliche API)."""
+    for host in ("https://libretranslate.de", "https://translate.argosopentech.com"):
+        try:
+            resp = requests.post(
+                f"{host}/translate",
+                json={"q": text, "source": source, "target": target, "format": "text"},
+                headers={"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, dict) and data.get("translatedText"):
+                    return data["translatedText"]
+        except Exception:
+            continue
+    return None
+
+
+def _translate_mymemory(text, source, target):
+    """MyMemory Translated (free tier, 1000/Tag/IP)."""
     try:
-        url = "https://libretranslate.de/translate"
-        payload = {"q": text, "source": source, "target": target, "format": "text"}
-        headers = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
-        resp = requests.post(url, json=payload, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        if isinstance(data, dict) and data.get("translatedText"):
-            return data["translatedText"]
-        return str(data)
-    except Exception as e:
-        return f"Fehler bei Übersetzung: {e}"
+        resp = requests.get(
+            "https://api.mymemory.translated.net/get",
+            params={"q": text, "langpair": f"{source}|{target}", "de": "buno23@web.de"},
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("responseStatus") == 200:
+                return data.get("responseData", {}).get("translatedText", "")
+    except Exception:
+        pass
+    return None
 
 
 def remove_markdown_code_blocks(text):
