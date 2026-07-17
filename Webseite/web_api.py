@@ -93,30 +93,27 @@ def parse_tools_from_help():
 ALL_TOOLS = parse_tools_from_help()
 
 # ═══════════════════════════════════════════
-# PASSWORDSCHUTZ (versteckt)
+# PASSWORDSCHUTZ
 # ═══════════════════════════════════════════
 PASSWORD_FILE = os.path.join(SCRIPT_DIR, ".webpass")
 AUTH_COOKIE = "klausy_auth"
 
-def load_password():
-    """Lese Passwort aus .webpass-Datei (erstes Zeichen = Hash-Modus)."""
+def get_stored_password():
+    """Hole Passwort: 1. .webpass-Datei, 2. WEB_PASSWORD env var."""
+    # Datei hat Vorrang
     if os.path.exists(PASSWORD_FILE):
         with open(PASSWORD_FILE, "r", encoding="utf-8") as f:
-            raw = f.read().strip()
-            if raw.startswith("hash:"):
-                return raw[5:], "hash"  # gespeicherter Hash
-            return raw, "plain"
-    return None, None
+            return f.read().strip()
+    # Fallback: Environment-Variable
+    env_pw = os.environ.get("WEB_PASSWORD")
+    if env_pw:
+        return env_pw
+    return None
 
 def check_password(input_pw):
-    stored, mode = load_password()
-    # Fallback: WEB_PASSWORD als Environment-Variable
-    if not stored:
-        stored = os.environ.get("WEB_PASSWORD")
+    stored = get_stored_password()
     if not stored:
         return True  # kein Passwort gesetzt = frei
-    if mode == "hash":
-        return hashlib.sha256(input_pw.encode()).hexdigest() == stored
     return input_pw == stored
 
 PASSWORD_HTML = """<!DOCTYPE html>
@@ -126,55 +123,59 @@ PASSWORD_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Klausy</title>
 <style>
-body{margin:0;background:#0d0d0d;color:#d4d4d4;font-family:Inter,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.w{text-align:center;max-width:320px}
-.w img{height:48px;opacity:.7;margin-bottom:16px}
-.w p{font-size:.8rem;color:#888;margin-bottom:20px}
-.w input{width:100%;padding:10px 14px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;color:#d4d4d4;font-size:.85rem;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color .3s}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;color:#d4d4d4;font-family:Inter,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh}
+.w{text-align:center;max-width:320px;width:88%}
+.w img{height:42px;opacity:.6;margin-bottom:14px}
+.w p{font-size:.82rem;color:#888;margin-bottom:18px}
+.w input{width:100%;padding:12px 16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;color:#d4d4d4;font-size:.95rem;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color .3s;-webkit-appearance:none}
 .w input:focus{border-color:#c96020}
-.w .h{font-size:.65rem;color:#555;margin-top:10px;cursor:default;user-select:none}
-.w .e{color:#c44;font-size:.72rem;margin-top:8px;display:none}
+.w button{width:100%;margin-top:12px;padding:12px;background:#c96020;color:#fff;border:none;border-radius:10px;font-size:.9rem;cursor:pointer;font-family:Inter,sans-serif;transition:background .2s;-webkit-appearance:none}
+.w button:hover{background:#d4783a}
+.w button:disabled{opacity:.5;cursor:wait}
+.w .e{color:#c44;font-size:.78rem;margin-top:10px;display:none}
 </style>
 </head>
 <body>
 <div class="w">
 <img src="klausy-logo.jpeg" alt="">
-<p>Zugang geschützt</p>
-<input type="password" id="pw" placeholder="" autofocus onkeydown="if(event.key==='Enter')login()">
+<p>Passwort eingeben</p>
+<input type="password" id="pw" autocomplete="off" onkeydown="if(event.key==='Enter')login()">
+<button id="btn" onclick="login()">Anmelden</button>
 <div class="e" id="err">Falsches Passwort</div>
-<div class="h">&middot;</div>
 </div>
 <script>
 function login(){
-  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pw:document.getElementById('pw').value})})
-  .then(r=>r.json()).then(d=>{if(d.ok)location.reload();else document.getElementById('err').style.display='block'})
-  .catch(()=>document.getElementById('err').style.display='block');
+  var pw=document.getElementById('pw'),btn=document.getElementById('btn'),err=document.getElementById('err');
+  if(!pw.value.trim())return;
+  btn.disabled=true;btn.textContent='Anmelden...';err.style.display='none';
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pw:pw.value})})
+  .then(function(r){return r.json()})
+  .then(function(d){if(d.ok){window.location.href='/';}else{err.style.display='block';btn.disabled=false;btn.textContent='Anmelden';pw.value='';pw.focus();}})
+  .catch(function(){err.textContent='Verbindungsfehler';err.style.display='block';btn.disabled=false;btn.textContent='Anmelden';});
 }
-window.addEventListener('load',function(){setTimeout(function(){document.getElementById('pw').focus()},100)});
+window.addEventListener('load',function(){setTimeout(function(){document.getElementById('pw').focus()},150)});
 </script>
 </body>
 </html>"""
 
 @app.before_request
 def check_auth():
-    """Prüfe Authentifizierung vor jeder Anfrage – KEINE Ausnahmen."""
-    stored, _ = load_password()
-    # Fallback: WEB_PASSWORD als Environment-Variable
+    """Prüfe Authentifizierung vor jeder Anfrage."""
+    stored = get_stored_password()
     if not stored:
-        stored = os.environ.get("WEB_PASSWORD")
-    if not stored:
-        return None  # kein Passwort gesetzt = frei zugänglich
+        return None  # kein Passwort = frei
     # Login-Endpunkt immer erlauben
     if request.path == "/api/auth":
         return None
     # Cookie prüfen
     token = request.cookies.get(AUTH_COOKIE)
-    if token and check_password(token):
+    if token and token == stored:
         return None
     # API-Aufrufe (außer Login) → 401
     if request.path.startswith("/api/"):
-        return jsonify({"error": "Nicht autorisiert. Bitte zuerst einloggen."}), 401
-    # Alles andere → Login-Seite (auch /index.html, /klausy-logo.jpeg, etc.)
+        return jsonify({"error": "Nicht autorisiert."}), 401
+    # Alles andere → Login-Seite
     resp = make_response(PASSWORD_HTML)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     return resp
