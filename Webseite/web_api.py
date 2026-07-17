@@ -162,12 +162,14 @@ def check_auth():
         return None
     if request.path in ("/api/auth",):
         return None
-    if request.path.startswith("/api/"):
-        return None
     # Cookie prüfen
     token = request.cookies.get(AUTH_COOKIE)
     if token and check_password(token):
         return None
+    # Login-Seite ausliefern
+    # Prüfen ob es ein API-Aufruf ist -> 401 zurück, nicht die Login-Seite
+    if request.path.startswith("/api/") and request.path != "/api/auth":
+        return jsonify({"error": "Nicht autorisiert. Bitte zuerst einloggen."}), 401
     # Login-Seite ausliefern
     resp = make_response(PASSWORD_HTML)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
