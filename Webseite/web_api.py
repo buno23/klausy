@@ -153,24 +153,24 @@ function login(){
 
 @app.before_request
 def check_auth():
-    """Prüfe Authentifizierung vor jeder Anfrage."""
+    """Prüfe Authentifizierung vor jeder Anfrage – KEINE Ausnahmen."""
     stored, _ = load_password()
+    # Fallback: WEB_PASSWORD als Environment-Variable
     if not stored:
-        return None  # kein Passwort = frei
-    # Statische Dateien (Bilder, CSS, JS, etc.) immer erlauben
-    if any(request.path.endswith(ext) for ext in (".jpeg",".jpg",".png",".gif",".svg",".ico",".css",".js")):
-        return None
-    if request.path in ("/api/auth",):
+        stored = os.environ.get("WEB_PASSWORD")
+    if not stored:
+        return None  # kein Passwort gesetzt = frei zugänglich
+    # Login-Endpunkt immer erlauben
+    if request.path == "/api/auth":
         return None
     # Cookie prüfen
     token = request.cookies.get(AUTH_COOKIE)
     if token and check_password(token):
         return None
-    # Login-Seite ausliefern
-    # Prüfen ob es ein API-Aufruf ist -> 401 zurück, nicht die Login-Seite
-    if request.path.startswith("/api/") and request.path != "/api/auth":
+    # API-Aufrufe (außer Login) → 401
+    if request.path.startswith("/api/"):
         return jsonify({"error": "Nicht autorisiert. Bitte zuerst einloggen."}), 401
-    # Login-Seite ausliefern
+    # Alles andere → Login-Seite (auch /index.html, /klausy-logo.jpeg, etc.)
     resp = make_response(PASSWORD_HTML)
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
     return resp
