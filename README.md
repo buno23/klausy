@@ -125,16 +125,6 @@ python web_api.py
 
 ---
 
-## 🔒 Sicherheit
-
-- **Passwortschutz** – optionaler Login via `.webpass`-Datei oder `WEB_PASSWORD`-Env-Var
-- **Session-Tokens** – sicheres, zufälliges Token statt Passwort im Cookie
-- **Rate-Limiting** – max. 5 Login-Versuche pro Minute
-- **Security-Header** – HSTS, X-Frame-Options, XSS-Schutz
-- **Secrets im .gitignore** – `.env`, `.webpass`, `Memorys/` werden nicht gepusht
-
----
-
 ## 📝 Verwendung
 
 Einfach eine Frage im Chat stellen – Klausy entscheidet selbst, ob ein Tool nötig ist:
