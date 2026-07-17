@@ -190,17 +190,16 @@ def safe_fetch_json(url, timeout=15, headers=None):
     return safe_fetch(url, timeout=timeout, json_mode=True, headers=headers)
 
 
-def browse_url(url):
+def browse_url(url, timeout=8):
     if not urlparse(url).scheme:
         url = "http://" + url
     try:
         response = requests.get(
             url,
-            timeout=15,
+            timeout=timeout,
             headers={"User-Agent": "Mozilla/5.0"},
         )
         response.raise_for_status()
-        # Encoding erkennen – wichtig für Umlaute (ä, ö, ü, ß)
         if response.encoding and response.encoding.lower() != "utf-8":
             response.encoding = response.apparent_encoding
         return html_to_text(response.text)
@@ -1879,6 +1878,43 @@ def _extract_ddg_result_links(html):
     return urls
 
 
+# Einfacher In-Memory-Cache für wiederholte Aufrufe
+_research_cache = {}
+_research_cache_lock = threading.Lock()
+_CACHE_TTL = 300  # 5 Minuten
+
+
+def _cache_get(key):
+    with _research_cache_lock:
+        if key in _research_cache:
+            ts, val = _research_cache[key]
+            if datetime.datetime.now().timestamp() - ts < _CACHE_TTL:
+                return val
+            del _research_cache[key]
+    return None
+
+
+def _cache_set(key, val):
+    with _research_cache_lock:
+        _research_cache[key] = (datetime.datetime.now().timestamp(), val)
+        # Cache-Größe begrenzen
+        if len(_research_cache) > 50:
+            oldest = sorted(_research_cache.keys(), key=lambda k: _research_cache[k][0])
+            for k in oldest[:20]:
+                del _research_cache[k]
+
+
+def _browse_page(url, timeout=6):
+    """Einzelseiten-Aufruf mit kurzem Timeout."""
+    try:
+        content = browse_url(url, timeout=timeout)
+        if not content.startswith("Fehler") and len(content) > 80:
+            return content[:400]
+    except Exception:
+        pass
+    return None
+
+
 def _optimize_search_query(raw_query):
     """KI optimiert den Suchbegriff für bessere Suchergebnisse."""
     try:
@@ -1902,10 +1938,9 @@ def _optimize_search_query(raw_query):
             ],
             temperature=0.2,
             max_tokens=50,
-            timeout=10,
+            timeout=5,
         )
         optimized = resp.choices[0].message.content.strip().strip('"').strip("'")
-        # Nur verwenden wenn sinnvoll (nicht zu lang, nicht leer)
         if optimized and len(optimized) > 5 and len(optimized) < 100:
             return optimized
     except Exception:
@@ -1914,122 +1949,103 @@ def _optimize_search_query(raw_query):
 
 
 def deep_research(topic):
-    """
-    Mehrstufige, tiefgreifende Recherche:
-    0. KI optimiert den Suchbegriff
-    1. DuckDuckGo-Suche -> Top-Ergebnis-Links extrahieren
-    2. Alle Top-Seiten browsen + Inhalt extrahieren
-    3. Wikipedia (DE) abrufen
-    4. Per KI zusammenfassen & strukturiert ausgeben
-    """
     if not topic or not topic.strip():
         return "❌ Bitte gib ein Thema für die Recherche an."
 
-    raw_topic = topic.strip()
+    raw = topic.strip()
+    # Cache-Check
+    cached = _cache_get(raw.lower())
+    if cached:
+        return cached
 
-    # 0. KI optimiert den Suchbegriff
-    topic = _optimize_search_query(raw_topic)
-    if not topic or topic == raw_topic:
-        topic = raw_topic
+    # 0. KI optimiert den Suchbegriff (parallel zur DuckDuckGo-Suche startbar, aber wir brauchen das Ergebnis zuerst)
+    topic = _optimize_search_query(raw)
 
-    # 1. DuckDuckGo-Suche + Fallback
+    # 1. DuckDuckGo-Suche + Wikipedia parallel
     result_urls = []
     search_sources = []
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        resp = requests.get(
-            "https://html.duckduckgo.com/html/",
-            params={"q": topic, "kl": "de-de"},
-            headers=headers, timeout=15,
-        )
-        resp.raise_for_status()
-        if resp.encoding and resp.encoding.lower() != "utf-8":
-            resp.encoding = resp.apparent_encoding
-        result_urls = _extract_ddg_result_links(resp.text)
-        if result_urls:
-            search_sources.append("DuckDuckGo")
-    except Exception:
-        pass
+    wiki_text = ""
 
-    # Fallback 1: Falls DuckDuckGo keine Ergebnisse liefert -> Wikipedia direkt
-    if not result_urls:
-        for lang in ("de", "en"):
-            for wt in (topic, topic.lower().replace(" ", "_")):
-                try:
-                    wiki_url = f"https://{lang}.wikipedia.org/wiki/{quote(wt)}"
-                    raw = browse_url(wiki_url)
-                    if not raw.startswith("Fehler") and len(raw) > 200:
-                        result_urls.append(wiki_url)
-                        search_sources.append(f"Wikipedia ({lang})")
-                        break
-                except Exception:
-                    continue
-            if result_urls:
-                break
-
-    # Fallback 2: Google Cache / Textise dot iitty
-    if not result_urls:
+    def _search_ddg():
+        nonlocal result_urls, search_sources
         try:
-            fallback = safe_fetch(f"https://lite.duckduckgo.com/lite/?q={quote(topic)}")
-            if fallback and "Fehler" not in str(fallback):
-                alt_links = re.findall(r'uddg=(https?%3A[^&"\']+)', str(fallback))
-                if not alt_links:
-                    alt_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', str(fallback))
-                for link in alt_links:
-                    decoded = unquote(link) if "%" in link else link
-                    if decoded not in result_urls:
-                        result_urls.append(decoded)
-                if alt_links:
-                    search_sources.append("DuckDuckGo (Lite)")
+            headers = {"User-Agent": "Mozilla/5.0"}
+            resp = requests.get(
+                "https://html.duckduckgo.com/html/",
+                params={"q": topic, "kl": "de-de"},
+                headers=headers, timeout=8,
+            )
+            resp.raise_for_status()
+            if resp.encoding and resp.encoding.lower() != "utf-8":
+                resp.encoding = resp.apparent_encoding
+            urls = _extract_ddg_result_links(resp.text)
+            if urls:
+                result_urls = urls[:6]
+                search_sources.append("DuckDuckGo")
         except Exception:
             pass
 
-    # 2. Webseiten browsen (Top 4)
-    collected_texts = []
-    for url in result_urls[:4]:
-        try:
-            content = browse_url(url)
-            if not content.startswith("Fehler") and len(content) > 100:
-                collected_texts.append(content[:600])
-        except Exception:
-            continue
-
-    # 3. Wikipedia (falls nicht schon passiert)
-    wiki_text = ""
-    if not any("wikipedia" in u.lower() for u in result_urls):
+    def _search_wiki():
+        nonlocal wiki_text, result_urls, search_sources
         for lang in ("de", "en"):
-            try:
-                wt = topic.replace(" ", "_")
-                raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
-                if raw.startswith("Fehler"):
-                    raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(topic.lower().replace(' ', '_'))}")
-                if not raw.startswith("Fehler"):
-                    wiki_text = raw[:800]
-                    break
-            except Exception:
-                continue
+            for wt in (topic.replace(" ", "_"), topic.lower().replace(" ", "_")):
+                try:
+                    raw_wiki = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
+                    if not raw_wiki.startswith("Fehler") and len(raw_wiki) > 200:
+                        wiki_text = raw_wiki[:800]
+                        if not result_urls:
+                            result_urls.append(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
+                            search_sources.append(f"Wikipedia ({lang})")
+                        return
+                except Exception:
+                    continue
 
+    threads = [threading.Thread(target=_search_ddg), threading.Thread(target=_search_wiki)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=10)
+
+    # 2. Webseiten parallel browsen (max 2 – schnell, nicht perfekt)
+    collected_texts = []
     if wiki_text:
-        collected_texts.insert(0, f"[Wikipedia]: {wiki_text}")
+        collected_texts.append(f"[Wikipedia]: {wiki_text}")
 
-    # 4. Mit KI zusammenfassen
-    source_info = ", ".join(search_sources) if search_sources else "keine"
-    summary = _summarize_research(topic, collected_texts, result_urls)
-    # Quellen-Info voranstellen
-    if search_sources:
-        summary = f"🔍 **Quellen:** {source_info}\n\n{summary}"
+    browse_threads = []
+    browse_count = min(len(result_urls), 2)
+    browse_results = [None] * browse_count
+
+    def _browse(idx, url):
+        browse_results[idx] = _browse_page(url, timeout=5)
+
+    for i, url in enumerate(result_urls[:browse_count]):
+        t = threading.Thread(target=_browse, args=(i, url))
+        browse_threads.append(t)
+        t.start()
+    for t in browse_threads:
+        t.join(timeout=7)
+
+    for r in browse_results:
+        if r:
+            collected_texts.append(r)
+
+    # 3. KI fasst zusammen + Quellen
+    source_info = ", ".join(search_sources) if search_sources else "Unbekannt"
+    summary = _summarize_research(topic, collected_texts, result_urls, source_info)
+
+    # Cache setzen
+    _cache_set(raw.lower(), summary)
     return summary
 
 
-def _summarize_research(topic, texts, urls):
+def _summarize_research(topic, texts, urls, source_info="Unbekannt"):
     """Fasse die gesammelten Recherche-Inhalte per KI zusammen."""
     if not texts:
         return f"🔍 Zur **{topic}** konnte ich leider keine Quellen finden.\n\nVersuche es mit einem anderen Suchbegriff oder nutze `TOOL: SEARCH {topic}`."
 
-    # Rohdaten kürzen (max 4000 Zeichen fürs LLM)
     raw = "\n---\n".join(t for t in texts if t)
-    if len(raw) > 4000:
-        raw = raw[:4000].rsplit(" ", 1)[0] + " [...]"
+    if len(raw) > 3500:
+        raw = raw[:3500].rsplit(" ", 1)[0] + " [...]"
 
     try:
         resp = client.chat.completions.create(
@@ -2038,39 +2054,34 @@ def _summarize_research(topic, texts, urls):
                 {
                     "role": "system",
                     "content": (
-                        "Du bist ein Recherche-Assistent. Fasse die folgenden Informationen "
-                        "zum Thema des Users strukturiert zusammen.\n\n"
+                        "Du bist ein Recherche-Assistent. Fasse die folgenden Informationen strukturiert zusammen.\n\n"
                         "Regeln:\n"
-                        "- Schreibe in DER SELBEN SPRACHE wie die Query des Users (Deutsch)\n"
-                        "- Verwende **fette Überschriften** und bullet points\n"
-                        "- Struktur: 1) Kurze Zusammenfassung (2-3 Sätze), 2) Wichtigste Punkte (bullet), "
-                        "3) Quellen (als Liste)\n"
-                        "- Maximal 500 Zeichen für die Zusammenfassung\n"
-                        "- Bleibe sachlich und faktenbasiert\n"
-                        "- Nur Informationen verwenden, die in den Quellen stehen"
+                        "- Schreibe in DER SELBEN SPRACHE wie die Query\n"
+                        "- Struktur: 1) Kurze Zusammenfassung (2-3 Sätze), 2) Wichtigste Punkte (bullet)\n"
+                        "- Maximal 600 Zeichen\n"
+                        "- Bleibe sachlich und faktenbasiert"
                     ),
                 },
                 {
                     "role": "user",
-                    "content": f"Thema: {topic}\n\nGefundene Informationen:\n{raw}",
+                    "content": f"Thema: {topic}\n\nInformationen:\n{raw}",
                 },
             ],
             temperature=0.3,
-            max_tokens=800,
-            timeout=20,
+            max_tokens=500,
+            timeout=10,
         )
         summary = resp.choices[0].message.content.strip()
-    except Exception as e:
-        # Fallback: Rohdaten anzeigen
-        summary = f"**🔍 Recherche zu: {topic}**\n\n"
+    except Exception:
+        summary = f"**Recherche zu: {topic}**\n\n"
         for i, t in enumerate(texts[:3], 1):
             summary += f"\n**Quelle {i}:**\n{t[:300]}...\n"
 
-    # Quellen anhängen
-    summary += "\n\n**📎 Quellen:**\n"
-    for i, url in enumerate(urls[:5], 1):
-        short = url[:70] + "..." if len(url) > 70 else url
-        summary += f"{i}. {short}\n"
+    # Quellen anhängen (kurz)
+    summary += f"\n\n**Quellen ({source_info}):**\n"
+    for url in urls[:4]:
+        short = url[:60] + "..." if len(url) > 60 else url
+        summary += f"- {short}\n"
 
     return summary.strip()
 
