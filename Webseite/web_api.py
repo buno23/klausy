@@ -110,6 +110,9 @@ def load_password():
 
 def check_password(input_pw):
     stored, mode = load_password()
+    # Fallback: WEB_PASSWORD als Environment-Variable
+    if not stored:
+        stored = os.environ.get("WEB_PASSWORD")
     if not stored:
         return True  # kein Passwort gesetzt = frei
     if mode == "hash":
