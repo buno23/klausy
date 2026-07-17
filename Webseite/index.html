@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klausy – KI-Assistent mit 80+ Tools</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0d0d;--bg2:#141414;--bg3:#1a1a1a;--bg4:#222;--bd:#2a2a2a;--tx:#d4d4d4;--tx2:#888;--tx3:#555;--ac:#c96020;--ac2:#d4783a;--ac3:#e8a870;--fs:1.1rem;--r:14px;--rs:10px;--rl:22px}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--tx);font-size:var(--fs);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+a{color:var(--ac2);text-decoration:none}
+::selection{background:rgba(201,96,32,.25)}
+
+/* ─── NAV ─── */
+.nv{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(13,13,13,.96);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;backdrop-filter:blur(12px)}
+.nv .lo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:1.15rem;color:#fff}
+.nv .lo img{height:52px}
+.nv .lo .li{width:26px;height:26px;background:var(--ac);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff}
+.nv .nl{display:flex;align-items:center;gap:8px;list-style:none}
+.nv .nl a{color:var(--tx2);font-size:.9rem;padding:8px 12px;border-radius:6px;transition:all .2s}
+.nv .nl a:hover{color:var(--ac2);background:rgba(201,96,32,.08)}
+.nv .nl .st{display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--tx3);padding:6px 10px;cursor:pointer;border-radius:5px;transition:background .15s}
+.nv .nl .st:hover{background:rgba(201,96,32,.08)}
+.nv .nl .st .dot{width:6px;height:6px;border-radius:50%;background:#555;transition:background .3s}
+.nv .nl .st .dot{width:6px;height:6px;border-radius:50%;background:#555;transition:background .3s}
+.nv .nl .st .dot.ok{background:#3a7;animation:none}
+.nv .nl .st .dot.er{background:#c44}
+
+/* ─── HERO ─── */
+.he{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 24px 70px;text-align:center;position:relative;background:radial-gradient(ellipse at 50% 0%, rgba(201,96,32,.08) 0%, transparent 60%)}
+.he h1{font-size:5rem;font-weight:700;letter-spacing:-.5px;margin-bottom:18px;line-height:1.15}
+.he h1 span{color:var(--ac)}
+.he .st{font-size:1.4rem;color:var(--tx2);max-width:640px;margin:0 auto 40px;font-weight:300}
+.he .ha{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.he .b1,.he .b2{padding:16px 40px;border-radius:36px;font-size:1.05rem;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:10px}
+.he .b1{background:var(--ac);color:#fff;border:none}
+.he .b1:hover{background:var(--ac2);transform:translateY(-1px)}
+.he .b2{background:transparent;border:1px solid var(--bd);color:var(--tx2)}
+.he .b2:hover{border-color:var(--ac);color:var(--ac2)}
+.he .stt{display:flex;gap:48px;margin-top:40px;flex-wrap:wrap;justify-content:center}
+.he .stt .si{text-align:center}
+.he .stt .si .n{font-size:2rem;font-weight:700;color:var(--ac)}
+.he .stt .si .l{font-size:.85rem;color:var(--tx3);margin-top:4px}
+
+/* ─── SECTIONS ─── */
+.sec{padding:70px 28px;max-width:1200px;margin:0 auto;border-bottom:1px solid var(--bo)}
+.sec .sh{text-align:center;margin-bottom:32px}
+.sec .sh h2{font-size:1.6rem;font-weight:600;margin-bottom:6px}
+.sec .sh p{color:var(--tx2);font-size:.9rem;font-weight:300}
+.sec .sh .ln{width:50px;height:2px;background:var(--ac);margin:12px auto 0;border-radius:1px;opacity:.5}
+
+/* ─── TOOLS SECTION ─── */
+.sec-tt{background:var(--bg)}
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;transition:border-color .2s}
+.tc:hover{border-color:var(--ac)}
+.tc .th{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;user-select:none;font-weight:500;font-size:.95rem;color:var(--tx)}
+.tc .th i{color:var(--ac);width:16px;text-align:center}
+.tc .th .ar{margin-left:auto;font-size:.45rem;color:var(--tx3);transition:transform .2s}
+.tc .th.o .ar{transform:rotate(90deg)}
+.tc .tb{display:none;padding:0 16px 12px}
+.tc .tb.o{display:block}
+.tc .ti{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:5px;cursor:pointer;font-size:.85rem;color:var(--tx2);transition:all .12s}
+.tc .ti:hover{background:rgba(201,96,32,.08);color:var(--tx)}
+.tc .ti i{width:12px;font-size:.6rem;color:var(--ac)}
+.tc .ti .bd{font-size:.45rem;padding:1px 6px;border-radius:4px;font-weight:500;margin-left:auto}
+.tc .ti .bd.tp{background:rgba(201,96,32,.12);color:var(--ac2)}
+.tc .ti .bd.ht{background:rgba(200,60,60,.1);color:#c66}
+
+/* ─── JUNIORAKADEMIE ─── */
+.sec-ja{background:var(--bg)}
+.ja-c{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px;margin:0 auto}
+@media(max-width:700px){.ja-c{grid-template-columns:1fr}}
+.ja-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:22px;transition:border-color .2s}
+.ja-card:hover{border-color:var(--ac)}
+.ja-card .jc-icon{font-size:1.3rem;color:var(--ac);margin-bottom:8px}
+.ja-card h4{font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--tx)}
+.ja-card p{font-size:.75rem;color:var(--tx2);line-height:1.7}
+.ja-card .jc-link{display:inline-block;margin-top:8px;font-size:.7rem;color:var(--ac2)}
+.ja-card .jc-link:hover{text-decoration:underline}
+
+/* ─── FUNKTIONSWEISE ─── */
+.sec-fn{background:var(--bg)}
+.fn-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.fn-item{text-align:center;padding:20px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);transition:border-color .2s}
+.fn-item:hover{border-color:var(--ac)}
+.fn-item i{font-size:1.5rem;color:var(--ac);margin-bottom:8px;display:block}
+.fn-item h4{font-size:.82rem;font-weight:600;margin-bottom:4px}
+.fn-item p{font-size:.72rem;color:var(--tx2);line-height:1.6}
+
+/* ─── TECHNOLOGIE ─── */
+.sec-tc{background:var(--bg)}
+.tc-g{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:800px;margin:0 auto}
+@media(max-width:650px){.tc-g{grid-template-columns:repeat(2,1fr)}}
+.tc-item{text-align:center;padding:20px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);transition:all .2s}
+.tc-item:hover{border-color:var(--ac);transform:translateY(-2px)}
+.tc-item i{font-size:1.6rem;color:var(--ac);margin-bottom:6px;display:block}
+.tc-item .tn{font-size:.78rem;font-weight:500;margin-bottom:2px}
+.tc-item .td{font-size:.62rem;color:var(--tx3);white-space:nowrap}
+
+/* ─── FAQ ─── */
+.sec-fq{background:var(--bg)}
+.fq-l{max-width:700px;margin:0 auto}
+.fq-item{border:1px solid var(--bd);border-radius:var(--rl);margin-bottom:12px;overflow:hidden;background:var(--bg2);transition:border-color .2s}
+.fq-item:hover{border-color:var(--ac)}
+.fq-q{display:flex;align-items:center;gap:10px;padding:16px 20px;cursor:pointer;user-select:none;font-size:.95rem;font-weight:500;color:var(--tx);transition:background .15s}
+.fq-q:hover{background:rgba(201,96,32,.04)}
+.fq-q i{color:var(--ac);width:18px;text-align:center;font-size:.75rem}
+.fq-q .ar{margin-left:auto;font-size:.45rem;color:var(--tx3);transition:transform .2s}
+.fq-q.o .ar{transform:rotate(90deg)}
+.fq-a{display:none;padding:0 20px 16px 48px;font-size:.88rem;color:var(--tx2);line-height:1.7}
+.fq-a.o{display:block}
+
+/* ─── SCROLL TO TOP ─── */
+.stt-btn{position:fixed;bottom:36px;right:36px;width:50px;height:50px;border-radius:50%;background:var(--ac);color:#fff;border:none;font-size:1.1rem;cursor:pointer;opacity:0;transform:translateY(20px);transition:all .3s;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.stt-btn.sh{opacity:1;transform:translateY(0)}
+.stt-btn:hover{background:var(--ac2);transform:translateY(-2px)}
+.stt-btn.sh:hover{transform:translateY(-2px)}
+
+/* ─── QUICK ACTIONS ─── */
+.qa{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px}
+@media(max-width:600px){.qa{grid-template-columns:repeat(2,1fr)}}
+.qa .qb{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:18px;text-align:center;cursor:pointer;transition:all .2s}
+.qa .qb:hover{border-color:var(--ac);background:rgba(201,96,32,.04)}
+.qa .qb i{font-size:1.5rem;color:var(--ac);margin-bottom:8px;display:block}
+.qa .qb .qn{font-size:.9rem;font-weight:500;color:var(--tx);margin-bottom:4px}
+.qa .qb .qd{font-size:.75rem;color:var(--tx3)}
+
+/* ─── CHAT SECTION ─── */
+.sec-ch{background:var(--bg);padding:60px 24px 40px;max-width:1200px;margin:0 auto}
+.ch-c{display:flex;flex-direction:column;height:68vh;min-height:450px;max-height:800px;border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;background:var(--bg2)}
+.ch-h{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--bd);background:var(--bg3);flex-shrink:0;width:100%}
+.ch-h .ct{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:500}
+.ch-h .ct i{color:var(--ac)}
+.ch-h .cc{display:flex;gap:6px}
+.ch-h .cc button{background:none;border:1px solid var(--bd);color:var(--tx2);padding:6px 12px;border-radius:6px;font-size:.72rem;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+.ch-h .cc button:hover{border-color:var(--ac);color:var(--ac2)}
+.ms{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.ms .wl{text-align:center;margin:auto;max-width:400px;padding:24px}
+.ms .wl .wi{font-size:2.2rem;color:var(--ac);margin-bottom:12px;opacity:.3}
+.ms .wl h3{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+.ms .wl p{color:var(--tx2);font-size:.85rem;line-height:1.6}
+.ms .wl .ws{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+.ms .wl .sg{padding:8px 16px;background:var(--bg3);border:1px solid var(--bd);border-radius:16px;font-size:.8rem;color:var(--tx2);cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+.ms .wl .ws .sg:hover{border-color:var(--ac);color:var(--ac2)}
+
+.msg{display:flex;gap:10px;max-width:92%;animation:mf .3s ease-out}
+@keyframes mf{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.u{align-self:flex-end;flex-direction:row-reverse;max-width:82%}
+.msg.b{align-self:flex-start;max-width:88%}
+.msg .av{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.msg.u .av{background:var(--ac);color:#fff;order:1}
+.msg.b .av{background:var(--bg3);border:1px solid var(--bd);color:var(--ac)}
+.msg .bb{padding:12px 18px;border-radius:var(--rl);font-size:var(--fs);line-height:1.65;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;hyphens:auto;position:relative}
+.msg.u .bb{background:var(--ac);color:#fff;border-bottom-right-radius:4px}
+.msg.b .bb{background:var(--bg3);border:1px solid var(--bd);color:var(--tx);border-bottom-left-radius:4px}
+.msg.b .bb p{margin:3px 0;word-wrap:break-word;overflow-wrap:break-word}
+.msg.b .bb a{word-break:break-all;display:inline-block;max-width:100%}
+.msg.b .bb code{background:rgba(255,255,255,.05);padding:1px 4px;border-radius:3px;font-size:.82em;color:var(--ac3);word-break:break-all}
+.msg.b .bb pre{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rs);padding:8px;overflow-x:auto;margin:4px 0;max-width:100%}
+.msg.b .bb pre code{background:none;padding:0;font-size:.7rem;color:var(--ac3);word-break:break-all;white-space:pre-wrap}
+.msg.b .bb ul,.msg.b .bb ol{padding-left:16px;margin:2px 0}
+.msg.b .bb blockquote{border-left:2px solid var(--ac);padding-left:8px;color:var(--tx2);margin:3px 0;font-style:italic}
+.msg .tm{font-size:.5rem;color:var(--tx3);margin-top:2px;text-align:right}
+.msg .cp{position:absolute;top:4px;right:4px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx3);padding:1px 5px;border-radius:3px;font-size:.45rem;cursor:pointer;opacity:0;transition:opacity .2s;font-family:'Inter',sans-serif}
+.msg.b .bb:hover .cp{opacity:1}
+.msg .cp:hover{background:rgba(201,96,32,.12);color:var(--ac2)}
+.ty{display:flex;align-items:center;gap:6px;padding:4px 0;margin-left:34px}
+.ty .dt{display:flex;gap:2px}
+.ty .dt span{width:8px;height:8px;border-radius:50%;background:var(--ac);animation:bn 1.4s ease-in-out infinite}
+.ty .dt span:nth-child(2){animation-delay:.2s}
+.ty .dt span:nth-child(3){animation-delay:.4s}
+@keyframes bn{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-4px);opacity:1}}
+.ty .tl{font-size:.78rem;color:var(--tx3)}
+.ia{flex-shrink:0;padding:14px 20px 16px;border-top:1px solid var(--bd);background:var(--bg3);width:100%}
+.ia .ir{display:flex;gap:6px;align-items:flex-end;width:100%}
+.ia textarea{flex:1;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:14px 18px;color:var(--tx);font-family:'Inter',sans-serif;font-size:var(--fs);resize:none;outline:none;min-height:56px;max-height:140px;transition:border-color .2s;width:100%}
+.ia textarea:focus{border-color:var(--ac)}
+.ia textarea::placeholder{color:var(--tx3)}
+.ia .bg{display:flex;gap:4px;flex-shrink:0;align-items:flex-end}
+.ia .vb{width:56px;height:56px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.ia .vb:hover{border-color:var(--ac);color:var(--ac2)}
+.ia .vb.rc{background:#c44;border-color:#c44;color:#fff}
+.ia .sd{width:56px;height:56px;border-radius:50%;border:none;background:var(--ac);color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.ia .sd:hover{background:var(--ac2)}
+.ia .sd:disabled{opacity:.35;cursor:not-allowed}
+.ia .ih{font-size:.75rem;color:var(--tx3);margin-top:6px;text-align:center}
+
+/* ─── TOOL AUTOCOMPLETE ─── */
+.ac-wrap{position:relative;flex:1;min-width:0}
+.ac-drop{position:absolute;bottom:100%;left:0;right:0;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--rs) var(--rs) 0 0;max-height:200px;overflow-y:auto;display:none;z-index:50;margin-bottom:4px}
+.ac-drop.sh{display:block}
+.ac-item{padding:6px 12px;font-size:.72rem;color:var(--tx2);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:6px}
+.ac-item:hover,.ac-item.sel{background:rgba(201,96,32,.12);color:var(--tx)}
+.ac-item i{width:14px;color:var(--ac);font-size:.65rem}
+.ac-item .bd{font-size:.45rem;padding:1px 5px;border-radius:4px;margin-left:auto}
+.ac-item .bd.tp{background:rgba(201,96,32,.12);color:var(--ac2)}
+
+/* ─── QUICK CHIPS ─── */
+.qc{display:flex;gap:6px;padding:0 20px 8px;flex-wrap:wrap;background:var(--bg3);flex-shrink:0;width:100%}
+.qc .qp{padding:5px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;font-size:.75rem;color:var(--tx2);cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap}
+.qc .qp:hover{border-color:var(--ac);color:var(--ac2);background:rgba(201,96,32,.05)}
+
+/* ─── RETRY BUTTON ─── */
+.msg .rt{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:3px 10px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx2);border-radius:4px;font-size:.6rem;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+.msg .rt:hover{border-color:var(--ac);color:var(--ac2)}
+
+/* ─── FOOTER ─── */
+.ft{text-align:center;padding:40px 28px;border-top:1px solid var(--bd);color:var(--tx3);font-size:.85rem}
+.ft a{color:var(--tx2)}
+.ft a:hover{color:var(--ac2)}
+
+/* ─── TOAST ─── */
+.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);border:1px solid var(--bd);padding:7px 18px;border-radius:var(--rs);color:var(--tx);font-size:.7rem;opacity:0;transition:all .3s;z-index:200;pointer-events:none;white-space:nowrap}
+.tt.sh{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── SCROLL ANIMATION ─── */
+.sc-in{opacity:0;transform:translateY(80px);transition:opacity 1s cubic-bezier(.25,.46,.45,.94),transform 1s cubic-bezier(.25,.46,.45,.94)}
+.sc-in.sh{opacity:1;transform:translateY(0)}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:768px){
+  .he h1{font-size:2.6rem}.he{min-height:60vh;padding:90px 16px 50px}
+  .sec{padding:40px 16px}.tg{grid-template-columns:1fr}.qa{grid-template-columns:repeat(2,1fr)}
+  .ch-c{height:75vh;min-height:400px;max-height:none;border-radius:var(--r);margin:0 -8px;border-left:none;border-right:none}
+  .sec-ch{padding:40px 8px}
+  .ms{padding:12px 12px}
+  .msg{max-width:98%}.msg.u{max-width:90%}.msg.b{max-width:95%}
+  .msg .av{width:32px;height:32px;font-size:.75rem}
+  .msg .bb{padding:10px 14px;font-size:.95rem}
+  .nv .nl .dn{display:none}.nv{padding:0 12px}
+  .ch-h .cc button{padding:4px 8px;font-size:.65rem}
+  .qc .qp{font-size:.68rem;padding:4px 10px}
+}
+@media(max-width:480px){
+  .he h1{font-size:2rem}.qa{grid-template-columns:1fr 1fr}
+  .ch-c{height:80vh;min-height:350px}
+  .msg .av{width:28px;height:28px}
+  .msg .bb{font-size:.9rem;padding:8px 12px}
+  .ia textarea{min-height:42px;padding:10px 14px;font-size:1rem}
+  .ia .vb,.ia .sd{width:44px;height:44px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nv">
+  <div class="lo" style="gap:4px"><img src="klausy-logo.jpeg" alt="Klausy" style="height:40px;opacity:.9"> <span style="font-weight:600;font-size:.9rem;color:#fff">Klausy</span></div>
+  <ul class="nl">
+    <li class="dn"><span class="st" onclick="showPwOverlay()" title="Klicken für Passwort"><span class="dot" id="statusDot"></span><span id="statusLabel">Initialisiere...</span></span></li>
+    <li><a href="#juniorakademie">Akademie</a></li>
+    <li><a href="#tools">Tools</a></li>
+    <li><a href="#chat">Chat</a></li>
+    <li><a onclick="cycleFontSize()" title="Schriftgröße ändern" style="cursor:pointer"><i class="fas fa-font"></i></a></li>
+  </ul>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="he">
+  <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(201,96,32,.1);border:1px solid rgba(201,96,32,.2);border-radius:20px;padding:5px 16px;font-size:.7rem;color:var(--ac2);margin-bottom:20px">
+    <i class="fas fa-graduation-cap"></i> JuniorAkademie Berlin – Kurs "Artificial Intelligence Agency"
+  </div>
+  <h1><span>Klausy</span> — dein KI-Assistent</h1>
+  <p class="st">Über <strong>80 Tools</strong> für Recherche, Wetter, Crypto, Entwicklung, Unterhaltung &amp; mehr – direkt entwickelt bei der JuniorAkademie Berlin.</p>
+  <div class="ha">
+    <a href="#chat" class="b1"><i class="fas fa-comment"></i> Chat starten</a>
+    <a href="#tools" class="b2"><i class="fas fa-grid-2"></i> Tools entdecken</a>
+  </div>
+  <div class="stt">
+    <div class="si"><div class="n">80+</div><div class="l">Tools</div></div>
+    <div class="si"><div class="n">9</div><div class="l">Kategorien</div></div>
+    <div class="si"><div class="n">∞</div><div class="l">Möglichkeiten</div></div>
+  </div>
+</section>
+
+<!-- ═══ JUNIORAKADEMIE ═══ -->
+<section class="sec sec-ja" id="juniorakademie">
+  <div class="sh">
+    <h2>Über die <span style="color:var(--ac)">JuniorAkademie</span></h2>
+    <p>„Humboldt auf Scharfenberg“ – Sommer 2026 auf der Insel Scharfenberg, Berlin</p>
+    <div class="ln"></div>
+  </div>
+  <div class="ja-c">
+    <div class="ja-card">
+      <div class="jc-icon"><i class="fas fa-graduation-cap"></i></div>
+      <h4>Was ist die JuniorAkademie?</h4>
+      <p>Die JuniorAkademie Berlin „Humboldt auf Scharfenberg“ ist ein Angebot des <strong>Landes Berlin</strong> zur Förderung besonders begabter und leistungsbereiter Schüler:innen der <strong>Klassenstufen 7 bis 10</strong>. Die Kurse gehen weit über den regulären Unterricht hinaus und finden jährlich in den Sommerferien statt – auf der wunderschönen <strong>Insel Scharfenberg</strong> im Tegeler See.</p>
+      <a class="jc-link" href="https://www.humboldt-auf-scharfenberg.de/" target="_blank">Zur Website <i class="fas fa-external-link-alt" style="font-size:.55rem"></i></a>
+    </div>
+    <div class="ja-card">
+      <div class="jc-icon"><i class="fas fa-robot"></i></div>
+      <h4>Kurs: „Artificial Intelligence Agency“</h4>
+      <p>In diesem Kurs haben wir gelernt, <strong>KI-Agenten selbst zu bauen</strong> – Systeme, die nicht nur Texte erzeugen, sondern <strong>selbstständig Aufgaben ausführen</strong> können. Wir nutzten große Sprachmodelle (LLMs), die auch lokal lauffähig sind, und brachten sie dazu, Handlungsfolgen für Hilfsprogramme zu erstellen. Unter anderem <strong>Klausy</strong> ist das Ergebnis – ein KI-Assistent mit über <strong>80 Tools</strong>, die er autonom ansteuern kann.</p>
+      <a class="jc-link" href="https://www.humboldt-auf-scharfenberg.de/index.php?id=4" target="_blank">Kursbeschreibung <i class="fas fa-external-link-alt" style="font-size:.55rem"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FUNKTIONSWEISE ═══ -->
+<section class="sec sec-fn" id="funktion">
+  <div class="sh">
+    <h2>Wie <span style="color:var(--ac)">funktioniert</span> Klausy?</h2>
+    <p>Technik &amp; Architektur hinter dem Assistenten</p>
+    <div class="ln"></div>
+  </div>
+  <div class="fn-g">
+    <div class="fn-item">
+      <i class="fas fa-brain"></i>
+      <h4>KI-Sprachmodell</h4>
+      <p>Klausy nutzt ein großes Sprachmodell (Gemma 4), das über eine API angesteuert wird – für natürliche Unterhaltungen und intelligente Antworten.</p>
+    </div>
+    <div class="fn-item">
+      <i class="fas fa-tools"></i>
+      <h4>80+ Werkzeuge</h4>
+      <p>Von Wetterabfrage über Wikipedia bis hin zu QR-Codes: Klausy hat Zugriff auf über 80 kostenlose API-Tools und führt sie auf Befehl aus.</p>
+    </div>
+    <div class="fn-item">
+      <i class="fas fa-sync-alt"></i>
+      <h4>Tool-Loop</h4>
+      <p>Erkennt der Assistent einen Tool-Befehl, führt er ihn aus, analysiert das Ergebnis und antwortet passend – automatisch und schnell.</p>
+    </div>
+    <div class="fn-item">
+      <i class="fas fa-database"></i>
+      <h4>Memory &amp; Verlauf</h4>
+      <p>Klausy merkt sich wichtige Informationen über dich und den Gesprächsverlauf – für persönliche und zusammenhängende Unterhaltungen.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TECHNOLOGIE ═══ -->
+<section class="sec sec-tc" id="technologie">
+  <div class="sh">
+    <h2>Technologie-<span style="color:var(--ac)">Stack</span></h2>
+    <p>Womit Klausy gebaut wurde</p>
+    <div class="ln"></div>
+  </div>
+  <div class="tc-g">
+    <div class="tc-item"><i class="fab fa-python"></i><div class="tn">Python</div><div class="td">Backend &amp; API-Logik</div></div>
+    <div class="tc-item"><i class="fas fa-flask"></i><div class="tn">Flask</div><div class="td">Webserver &amp; REST-API</div></div>
+    <div class="tc-item"><i class="fas fa-microchip"></i><div class="tn">Gemma 4</div><div class="td">KI-Sprachmodell (LLM)</div></div>
+    <div class="tc-item"><i class="fab fa-html5"></i><div class="tn">HTML5</div><div class="td">Seitenstruktur</div></div>
+    <div class="tc-item"><i class="fab fa-css3-alt"></i><div class="tn">CSS3</div><div class="td">Design &amp; Layout</div></div>
+    <div class="tc-item"><i class="fab fa-js"></i><div class="tn">JavaScript</div><div class="td">Interaktion &amp; Chat-UI</div></div>
+    <div class="tc-item"><i class="fas fa-cloud"></i><div class="tn">APIs</div><div class="td">80+ externe Dienste</div></div>
+    <div class="tc-item"><i class="fas fa-code-branch"></i><div class="tn">Discord.py</div><div class="td">Discord-Bot-Integration</div></div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="sec sec-fq" id="faq">
+  <div class="sh">
+    <h2>Häufige <span style="color:var(--ac)">Fragen</span></h2>
+    <p>Alles Wissenswerte rund um Klausy</p>
+    <div class="ln"></div>
+  </div>
+  <div class="fq-l">
+    <div class="fq-item">
+      <div class="fq-q o" onclick="this.classList.toggle('o');this.nextElementSibling.classList.toggle('o')">
+        <i class="fas fa-question-circle"></i> Was kann Klausy?<span class="ar"><i class="fas fa-chevron-right"></i></span>
+      </div>
+      <div class="fq-a o">Klausy kann weit mehr als nur Chatten: Er recherchiert im Web, checkt das Wetter, sucht Preise, übersetzt Texte, sucht Wikipedia-Artikel, erzählt Witze, generiert QR-Codes, rechnet Mathe, zeigt Länderinfos und vieles mehr – über <strong>80 Tools</strong> stehen bereit!</div>
+    </div>
+    <div class="fq-item">
+      <div class="fq-q" onclick="this.classList.toggle('o');this.nextElementSibling.classList.toggle('o')">
+        <i class="fas fa-question-circle"></i> Wie nutze ich ein Tool?<span class="ar"><i class="fas fa-chevron-right"></i></span>
+      </div>
+      <div class="fq-a">Du kannst entweder <strong>natürlich</strong> mit Klausy sprechen (z. B. „Wie ist das Wetter in Berlin?“) oder gezielt <strong>TOOL:</strong> gefolgt vom Tool-Namen eingeben (z. B. <code>TOOL: WEATHER Berlin</code>). Klick einfach auf ein Tool in der Übersicht, es wird automatisch in die Chat-Eingabe übernommen.</div>
+    </div>
+    <div class="fq-item">
+      <div class="fq-q" onclick="this.classList.toggle('o');this.nextElementSibling.classList.toggle('o')">
+        <i class="fas fa-question-circle"></i> Ist Klausy kostenlos?<span class="ar"><i class="fas fa-chevron-right"></i></span>
+      </div>
+      <div class="fq-a">Ja! Klausy nutzt ausschließlich <strong>kostenlose APIs</strong> und läuft auf einer Open-Source-Basis. Es fallen keine Gebühren an – weder für dich noch für uns. Entwickelt wurde der Bot im Rahmen der JuniorAkademie Berlin.</div>
+    </div>
+    <div class="fq-item">
+      <div class="fq-q" onclick="this.classList.toggle('o');this.nextElementSibling.classList.toggle('o')">
+        <i class="fas fa-question-circle"></i> Kann ich Klausy auch selbst hosten?<span class="ar"><i class="fas fa-chevron-right"></i></span>
+      </div>
+      <div class="fq-a">Der gesamte Quellcode liegt lokal auf dem Rechner. Du kannst den Server mit <code>python web_api.py</code> starten und unter <code>localhost:5000</code> darauf zugreifen. Voraussetzung ist ein API-Key für das LLM (hinterlegt in der <code>.env</code>-Datei).</div>
+    </div>
+    <div class="fq-item">
+      <div class="fq-q" onclick="this.classList.toggle('o');this.nextElementSibling.classList.toggle('o')">
+        <i class="fas fa-question-circle"></i> Wo wurde Klausy entwickelt?<span class="ar"><i class="fas fa-chevron-right"></i></span>
+      </div>
+      <div class="fq-a">Klausy entstand im Kurs <strong>„Artificial Intelligence Agency“</strong> der <strong>JuniorAkademie Berlin „Humboldt auf Scharfenberg“</strong> – einem Förderprogramm des Landes Berlin für besonders begabte Schüler:innen, das jährlich auf der Insel Scharfenberg im Tegeler See stattfindet.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TOOLS ═══ -->
+<section class="sec sec-tt" id="tools">
+  <div class="sh">
+    <h2>Alle Tools <span style="color:var(--ac)">auf einen Blick</span></h2>
+    <p>Klick auf ein Tool, um es direkt in den Chat zu übernehmen</p>
+    <div class="ln"></div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="qa" id="qa"></div>
+
+  <!-- Tool Categories -->
+  <div class="tg" id="tg"></div>
+</section>
+
+<!-- ═══ CHAT ═══ -->
+<section class="sec sec-ch" id="chat">
+  <div class="sh">
+    <h2>Chat mit <span style="color:var(--ac)">Klausy</span></h2>
+    <p>Stell Fragen, nutze Tools, lass dir helfen</p>
+    <div class="ln"></div>
+  </div>
+
+  <div class="ch-c">
+    <div class="ch-h">
+      <div class="ct"><i class="fas fa-comment-dots"></i> Chat</div>
+      <div class="cc">
+        <button onclick="cc()" title="Leeren"><i class="fas fa-eraser"></i></button>
+        <button onclick="ec()" title="Exportieren"><i class="fas fa-download"></i></button>
+      </div>
+    </div>
+    <div class="ms" id="ms">
+      <div class="wl" id="wl">
+        <div class="wi"><i class="fas fa-comment-dots"></i></div>
+        <h3>Klausy</h3>
+        <p>KI-Assistent mit über 80 Tools. Starte einfach mit einer Frage!</p>
+        <div class="ws" id="sg"></div>
+      </div>
+    </div>
+    <div class="ty" id="ty" style="display:none;padding-left:18px">
+      <div class="dt"><span></span><span></span><span></span></div>
+      <span class="tl">Antwort wird erstellt...</span>
+    </div>
+    <div class="ia">
+      <div class="qc" id="qc"></div>
+      <div class="ir">
+        <div class="ac-wrap">
+          <textarea id="inp" rows="1" placeholder="Nachricht schreiben..." onkeydown="hk(event)" oninput="ar(this);acInput()"></textarea>
+          <div class="ac-drop" id="acDrop"></div>
+        </div>
+        <div class="bg">
+          <button class="vb" id="vb" onclick="tv()" title="Spracheingabe"><i class="fas fa-microphone"></i></button>
+          <button class="sd" id="sd" onclick="sm()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+      <div class="ih"><i class="fas fa-terminal"></i> TOOL: NAME &lt;param&gt; für Tool-Befehle</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="ft">
+  <div style="max-width:500px;margin:0 auto;line-height:1.8">
+    <strong>Klausy</strong> — KI-Assistent &middot; entwickelt im Kurs <em>„Artificial Intelligence Agency“</em><br>
+    der <a href="https://www.humboldt-auf-scharfenberg.de/" target="_blank">JuniorAkademie Berlin „Humboldt auf Scharfenberg“</a><br>
+    <span style="font-size:.65rem;color:var(--tx3)">Ein Angebot des Landes Berlin zur Förderung besonders begabter Schüler:innen der Klassen 7–10</span>
+  </div>
+  <div style="margin-top:12px;font-size:.65rem;color:var(--tx3)">
+    <a href="#" onclick="st()" style="color:var(--tx2)">Nach oben</a>
+  </div>
+</footer>
+
+<!-- ═══ SCROLL TO TOP ═══ -->
+<button class="stt-btn" id="sttBtn" onclick="st()" title="Nach oben"><i class="fas fa-arrow-up"></i></button>
+
+<!-- ═══ PASSWORT OVERLAY ═══ -->
+<div id="pwOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)hidePwOverlay()">
+  <div style="background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:28px;text-align:center;width:300px">
+    <img src="klausy-logo.jpeg" style="height:40px;opacity:.7;margin-bottom:14px">
+    <p style="font-size:.8rem;color:#888;margin-bottom:16px">Passwort eingeben</p>
+    <input type="password" id="pwInput" style="width:100%;padding:10px 14px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;color:#d4d4d4;font-size:.85rem;outline:none;font-family:Inter,sans-serif;box-sizing:border-box" onkeydown="if(event.key==='Enter')submitPw()" autofocus>
+    <div id="pwError" style="color:#c44;font-size:.72rem;margin-top:8px;display:none">Falsches Passwort</div>
+    <button onclick="submitPw()" style="margin-top:12px;width:100%;padding:9px;background:#c96020;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;font-family:Inter,sans-serif">Bestätigen</button>
+    <div style="margin-top:10px;font-size:.65rem;color:#555;cursor:pointer" onclick="hidePwOverlay()">Abbrechen</div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="tt" id="tt"></div>
+
+<script>
+const TD=[
+  {c:"Recherche & Wissen",i:"fas fa-book-open",t:[
+    {n:"DEEPRESEARCH",i:"fas fa-brain",b:"tp",d:"Tiefgreifende Recherche"},{n:"SEARCH",i:"fas fa-search",d:"Web-Suche"},
+    {n:"NEWS",i:"fas fa-newspaper",d:"Aktuelle Nachrichten"},{n:"WIKI",i:"fab fa-wikipedia-w",d:"Wikipedia-Artikel"},
+    {n:"DEFINE",i:"fas fa-book",d:"Wortdefinition"},{n:"DICTIONARY",i:"fas fa-book-open",d:"Engl. Wörterbuch"}
+  ]},
+  {c:"Wetter & Zeit",i:"fas fa-clock",t:[
+    {n:"WEATHER",i:"fas fa-cloud-sun",b:"tp",d:"Wetter + Vorhersage"},{n:"TIME / DATE",i:"fas fa-clock",d:"Uhrzeit / Datum"},
+    {n:"TIMESTAMP",i:"fas fa-clock",d:"Unix-Zeit"},{n:"MATH",i:"fas fa-calculator",d:"Rechner"}
+  ]},
+  {c:"Web & Netzwerk",i:"fas fa-globe",t:[
+    {n:"BROWSE",i:"fas fa-globe",d:"Webseite lesen"},{n:"URLINFO",i:"fas fa-info-circle",d:"Seiten-Infos"},
+    {n:"EXTRACTLINKS",i:"fas fa-link",d:"Links extrahieren"},{n:"PING",i:"fas fa-ping",d:"Erreichbarkeit"},
+    {n:"IPINFO",i:"fas fa-map-pin",d:"IP-Infos"},{n:"MYIP",i:"fas fa-ip",d:"Eigene IP"},
+    {n:"SHORTEN",i:"fas fa-short",d:"URL kürzen"},{n:"QRCODE",i:"fas fa-qrcode",d:"QR-Code"}
+  ]},
+  {c:"Entwicklung & Code",i:"fas fa-code",t:[
+    {n:"GITHUB",i:"fab fa-github",d:"GitHub-Profil"},{n:"FORMATJSON",i:"fas fa-file-code",d:"JSON formatieren"},
+    {n:"HASH",i:"fas fa-hashtag",d:"MD5/SHA"},{n:"BIN",i:"fas fa-code",d:"Bin/Hex/Oct"},
+    {n:"ASCII",i:"fas fa-font",d:"ASCII-Codes"},{n:"UNITS",i:"fas fa-ruler",d:"Einheiten"},
+    {n:"WORDCOUNT",i:"fas fa-calculator",d:"Wörter zählen"},{n:"BASE64",i:"fas fa-lock",d:"Base64"}
+  ]},
+  {c:"Finanzen & Shopping",i:"fas fa-coins",t:[
+    {n:"PRICE",i:"fas fa-tag",d:"Preisvergleich"},{n:"CURRENCY",i:"fas fa-money-bill-wave",d:"Währungen"}
+  ]},
+  {c:"Geo & Welt",i:"fas fa-globe-americas",t:[
+    {n:"COUNTRY",i:"fas fa-flag",b:"tp",d:"Länderinfos"},{n:"EARTHQUAKE",i:"fas fa-earthquake",d:"Erdbeben"},
+    {n:"ISS",i:"fas fa-satellite",d:"ISS-Position"},{n:"UNIVERSITY",i:"fas fa-university",d:"Uni-Suche"},
+    {n:"SPACEFLIGHT",i:"fas fa-rocket",d:"Space-News"}
+  ]},
+  {c:"Spiele & Quiz",i:"fas fa-puzzle-piece",t:[
+    {n:"TRIVIA",i:"fas fa-question-circle",d:"Quizfrage"},
+    {n:"NUMBERS",i:"fas fa-hashtag",d:"Zahlen-Fakt"},{n:"DICEROLL",i:"fas fa-dice",d:"Würfel"}
+  ]},
+  {c:"Unterhaltung",i:"fas fa-mask",t:[
+    {n:"INSPIRE",i:"fas fa-quote-right",d:"Inspiration"},{n:"ADVICE",i:"fas fa-lightbulb",d:"Ratschlag"},
+    {n:"DOG",i:"fas fa-dog",d:"Hundebild"},{n:"CAT",i:"fas fa-cat",d:"Katzenbild"},
+    {n:"LYRICS",i:"fas fa-music",d:"Songtexte"},{n:"TRANSLATE",i:"fas fa-language",d:"Übersetzer"}
+  ]},
+  {c:"Werkzeuge",i:"fas fa-tools",t:[
+    {n:"PASSWORD",i:"fas fa-key",d:"Passwort"},{n:"UUID",i:"fas fa-fingerprint",d:"UUID"},
+    {n:"RANDOM",i:"fas fa-random",d:"Zufallszahl"},{n:"RECIPE",i:"fas fa-utensils",d:"Rezepte"}
+  ]}
+];
+
+const QA=[
+  {i:"fas fa-cloud-sun",n:"Wetter",d:"Aktuelle Vorhersage",c:"TOOL: WEATHER Berlin"},
+  {i:"fas fa-brain",n:"Recherche",d:"Tiefen-Recherche",c:"TOOL: DEEPRESEARCH KI"},
+  {i:"fas fa-newspaper",n:"News",d:"Aktuelle News",c:"TOOL: NEWS KI"},
+  {i:"fas fa-flag",n:"Länderinfo",d:"Daten + Flagge",c:"TOOL: COUNTRY Japan"},
+  {i:"fas fa-globe",n:"Webseite",d:"Seite lesen",c:"TOOL: BROWSE https://example.com"},
+  {i:"fas fa-lightbulb",n:"Ratschlag",d:"Zufälliger Tipp",c:"TOOL: ADVICE"},
+  {i:"fas fa-calculator",n:"Rechnen",d:"Mathe-Aufgabe",c:"TOOL: MATH 2+2"},
+  {i:"fas fa-key",n:"Passwort",d:"Sicheres Passwort",c:"TOOL: PASSWORD 16"}
+];
+
+let sid=localStorage.getItem('ksid');
+if(!sid){sid='w_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);localStorage.setItem('ksid',sid)}
+let is=false,rcg=null,irc=false,autoStarted=false;
+
+// ─── BUILD TOOLS ───
+function bt(){
+  const el=document.getElementById('tg');el.innerHTML='';
+  TD.forEach(g=>{
+    const c=document.createElement('div');c.className='tc';
+    const h=document.createElement('div');h.className='th';
+    h.innerHTML=`<i class="${g.i}"></i>${g.c}<span class="ar"><i class="fas fa-chevron-right"></i></span>`;
+    const b=document.createElement('div');b.className='tb';
+    g.t.forEach(t=>{
+      const d=document.createElement('div');d.className='ti';
+      d.innerHTML=`<i class="${t.i}"></i> ${t.n}${t.b?` <span class="bd ${t.b}">${t.b==='tp'?'★':'🔥'}</span>`:''}<span style="margin-left:auto;font-size:.6rem;color:var(--tx3)">${t.d||''}</span>`;
+      d.onclick=()=>{document.getElementById('inp').value='TOOL: '+t.n+' ';scrollToChat();document.getElementById('inp').focus()};
+      b.appendChild(d);
+    });
+    h.onclick=()=>{h.classList.toggle('o');b.classList.toggle('o')};
+    c.appendChild(h);c.appendChild(b);el.appendChild(c);
+  });
+}
+
+// ─── BUILD QUICK ACTIONS ───
+function bq(){
+  const el=document.getElementById('qa');el.innerHTML='';
+  QA.forEach(q=>{
+    const d=document.createElement('div');d.className='qb';
+    d.innerHTML=`<i class="${q.i}"></i><div class="qn">${q.n}</div><div class="qd">${q.d}</div>`;
+    d.onclick=()=>{document.getElementById('inp').value=q.c;scrollToChat();document.getElementById('inp').focus();sm()};
+    el.appendChild(d);
+  });
+}
+
+// ─── BUILD SUGGESTIONS ───
+function bs(){
+  const el=document.getElementById('sg');el.innerHTML='';
+  ['TOOL: WEATHER Berlin','TOOL: DEEPRESEARCH Quantencomputer','TOOL: COUNTRY Japan','TOOL: NEWS KI','TOOL: ADVICE'].forEach(s=>{
+    const d=document.createElement('span');d.className='sg';d.textContent=s;d.onclick=()=>ss(s);el.appendChild(d);
+  });
+}
+
+function scrollToChat(){
+  document.getElementById('chat').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>document.getElementById('inp').focus(),400);
+}
+
+// ─── HELPERS ───
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px'}
+function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sm()}}
+function st(){window.scrollTo({top:0,behavior:'smooth'})}
+function toast(m){const t=document.getElementById('tt');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),2500)}
+
+// ─── SCHRIFTGRÖSSE ───
+const FONT_SIZES=['.8rem','.85rem','.9rem','.95rem','1rem','1.1rem'];
+let fsIdx=1;
+function cycleFontSize(){
+  fsIdx=(fsIdx+1)%FONT_SIZES.length;
+  const s=FONT_SIZES[fsIdx];
+  document.querySelector(':root').style.setProperty('--fs',s);
+  document.querySelectorAll('.msg .bb').forEach(el=>el.style.fontSize=s);
+  toast('Schrift: '+s);
+}
+
+// ─── PASSWORT OVERLAY ───
+function showPwOverlay(){
+  document.getElementById('pwOverlay').style.display='flex';
+  setTimeout(()=>document.getElementById('pwInput').focus(),100);
+}
+function hidePwOverlay(){
+  document.getElementById('pwOverlay').style.display='none';
+  document.getElementById('pwError').style.display='none';
+  document.getElementById('pwInput').value='';
+}
+function submitPw(){
+  const pw=document.getElementById('pwInput').value.trim();
+  if(!pw)return;
+  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pw:pw})})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){hidePwOverlay();toast('✓ Passwort akzeptiert');setTimeout(()=>location.reload(),500)}
+    else{document.getElementById('pwError').style.display='block';document.getElementById('pwInput').value='';document.getElementById('pwInput').focus()}
+  }).catch(()=>{document.getElementById('pwError').textContent='Verbindungsfehler';document.getElementById('pwError').style.display='block'});
+}
+
+function setStatus(ok,label){
+  document.getElementById('statusDot').className='dot'+(ok===true?' ok':ok===false?' er':'');
+  document.getElementById('statusLabel').textContent=label||(ok===true?'Online':ok===false?'Offline':'Initialisiere...');
+}
+
+// ─── MESSAGES ───
+function am(r,t,ts){
+  const c=document.getElementById('ms'),wl=document.getElementById('wl');
+  if(wl&&wl.style.display!=='none')wl.style.display='none';
+  const d=document.createElement('div');d.className='msg '+(r==='user'?'u':'b');
+  const a=document.createElement('div');a.className='av';
+  a.innerHTML=r==='user'?'<i class="fas fa-user"></i>':'<img src="klausy-logo.jpeg" style="width:22px;height:22px;border-radius:50%;object-fit:cover">';
+  const b=document.createElement('div');b.className='bb';
+  if(r==='bot'&&typeof marked!=='undefined'){
+    // Spoiler-Tags ||...|| durch versteckten Text ersetzen
+    let html = t.replace(/\|\|(.+?)\|\|/g, '<span style="background:var(--tx3);color:var(--tx3);border-radius:3px;padding:0 4px;cursor:pointer" onclick="this.style.background=\'transparent\';this.style.color=\'inherit\'" title="Klicken zum Aufdecken">$1</span>');
+    // Sicherstellen dass Markdown richtig gerendert wird
+    marked.setOptions({breaks:true,gfm:true});
+    b.innerHTML=marked.parse(html);
+    b.querySelectorAll('a').forEach(el=>el.setAttribute('target','_blank'));
+  }else{b.textContent=t;}
+  const cp=document.createElement('button');cp.className='cp';
+  cp.innerHTML='<i class="fas fa-copy"></i>';
+  cp.onclick=()=>{navigator.clipboard.writeText(t).then(()=>toast('✓ Kopiert'))};
+  b.appendChild(cp);
+  const tm=document.createElement('div');tm.className='tm';
+  tm.textContent=ts||new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  b.appendChild(tm);d.appendChild(a);d.appendChild(b);c.appendChild(d);
+  c.scrollTop=c.scrollHeight;
+}
+function sty(v){document.getElementById('ty').style.display=v?'flex':'none';if(v)document.getElementById('ms').scrollTop=document.getElementById('ms').scrollHeight}
+
+// ─── SEND ───
+function sm(){
+  const inp=document.getElementById('inp'),t=inp.value.trim();
+  if(!t||is)return;
+  am('user',t);inp.value='';ar(inp);
+  is=true;document.getElementById('sd').disabled=true;sty(true);
+  fetch('/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Session-Id':sid},
+    body:JSON.stringify({message:t,session_id:sid})
+  }).then(r=>r.json()).then(d=>{
+    sty(false);
+    if(d.error)am('bot','❌ '+d.error);
+    else am('bot',d.answer);
+    setStatus(true,'Online');
+  }).catch(()=>{
+    sty(false);const msg=am('bot','❌ Server nicht erreichbar.');
+    addRetry(msg,t);setStatus(false,'Offline');
+  }).finally(()=>{is=false;document.getElementById('sd').disabled=false});
+}
+function ss(t){document.getElementById('inp').value=t;sm()}
+
+// ─── CLEAR ───
+function cc(){
+  if(!confirm('Chat leeren?'))return;
+  document.getElementById('ms').innerHTML=`
+    <div class="wl" id="wl"><div class="wi"><i class="fas fa-comment-dots"></i></div>
+    <h3>Klausy</h3><p>KI-Assistent mit über 80 Tools.</p>
+    <div class="ws" id="sg"></div></div>`;
+  bs();
+  fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json','X-Session-Id':sid},body:JSON.stringify({session_id:sid})}).catch(()=>{});
+}
+
+// ─── EXPORT ───
+function ec(){
+  const msgs=document.querySelectorAll('.msg');
+  if(!msgs.length){toast('Keine Nachrichten');return;}
+  let txt='Klausy Chat Export\n'+new Date().toLocaleString('de-DE')+'\n'+'─'.repeat(40)+'\n\n';
+  msgs.forEach(m=>{
+    const role=m.classList.contains('u')?'Du':'Klausy';
+    const bb=m.querySelector('.bb');
+    const text=bb?bb.textContent.replace(/\n$/,'').replace(/^\d{2}:\d{2}$/m,''):'';
+    const tm=m.querySelector('.tm');
+    txt+=`[${tm?tm.textContent:''}] ${role}: ${text.trim()}\n\n`;
+  });
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='klausy-'+new Date().toISOString().slice(0,10)+'.txt';a.click();
+  URL.revokeObjectURL(a.href);toast('✓ Exportiert');
+}
+
+// ─── VOICE ───
+function tv(){
+  if(irc){if(rcg){rcg.stop();irc=false;document.getElementById('vb').classList.remove('rc');toast('Spracheingabe gestoppt');return}}
+  if(!('webkitSpeechRecognition'in window)&&!('SpeechRecognition'in window)){toast('Spracheingabe nicht unterstützt');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  rcg=new SR();rcg.lang='de-DE';rcg.continuous=true;rcg.interimResults=true;
+  rcg.onresult=(e)=>{
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      t+=e.results[i][0].transcript;
+      if(e.results[i].isFinal){
+        document.getElementById('inp').value+=e.results[i][0].transcript+' ';
+        ar(document.getElementById('inp'));
+      }
+    }
+  };
+  rcg.onerror=(e)=>{
+    irc=false;document.getElementById('vb').classList.remove('rc');
+    if(e.error!=='no-speech')toast('Fehler: '+e.error);
+  };
+  rcg.onend=()=>{irc=false;document.getElementById('vb').classList.remove('rc')};
+  irc=true;document.getElementById('vb').classList.add('rc');rcg.start();
+  toast('Spracheingabe aktiv - erneutes Klicken stoppt');
+}
+
+// ─── TOOL AUTOCOMPLETE ───
+let acIdx=-1,acTools=[];
+function acInput(){
+  const v=document.getElementById('inp').value,drop=document.getElementById('acDrop');
+  const m=v.match(/TOOL:\s*(\w*)$/i);
+  if(!m){drop.classList.remove('sh');return}
+  const q=m[1].toLowerCase();
+  acTools=[];
+  TD.forEach(g=>g.t.forEach(t=>{if(t.n.toLowerCase().includes(q))acTools.push(t)}));
+  acTools=acTools.slice(0,8);
+  if(!acTools.length){drop.classList.remove('sh');return}
+  drop.innerHTML=acTools.map((t,i)=>`<div class="ac-item${i===0?' sel':''}" data-idx="${i}"><i class="${t.i}"></i>${t.n}${t.b?` <span class="bd tp">${t.b==='tp'?'★':'🔥'}</span>`:''}</div>`).join('');
+  drop.classList.add('sh');acIdx=0;
+  // Klick-Handler
+  drop.querySelectorAll('.ac-item').forEach(el=>el.onclick=()=>{
+    const idx=parseInt(el.dataset.idx);selectAc(idx);sendAc()});
+}
+function selectAc(i){
+  document.querySelectorAll('.ac-item').forEach(el=>el.classList.remove('sel'));
+  const el=document.querySelector(`.ac-item[data-idx="${i}"]`);
+  if(el)el.classList.add('sel');acIdx=i;
+}
+function sendAc(){
+  if(acIdx<0||acIdx>=acTools.length)return;
+  const inp=document.getElementById('inp');
+  inp.value=inp.value.replace(/TOOL:\s*\w*$/i,'TOOL: '+acTools[acIdx].n+' ');
+  document.getElementById('acDrop').classList.remove('sh');acIdx=-1;
+  ar(inp);inp.focus();
+}
+// Erweiterter KeyHandler mit Autocomplete-Support
+const _hk=hk;
+hk=function(e){
+  const drop=document.getElementById('acDrop');
+  if(!drop.classList.contains('sh')){_hk(e);return}
+  if(e.key==='ArrowDown'){e.preventDefault();selectAc(Math.min(acIdx+1,acTools.length-1))}
+  else if(e.key==='ArrowUp'){e.preventDefault();selectAc(Math.max(acIdx-1,0))}
+  else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();sendAc()}
+  else if(e.key==='Escape'){drop.classList.remove('sh');acIdx=-1}
+  else _hk(e);
+};
+
+// ─── QUICK CHIPS ───
+function bqChips(){
+  const el=document.getElementById('qc');el.innerHTML='';
+  ['WEATHER Berlin','DEEPRESEARCH KI','COUNTRY Japan','NEWS','ADVICE'].forEach(s=>{
+    const d=document.createElement('button');d.className='qp';
+    d.textContent=s;d.onclick=()=>{document.getElementById('inp').value='TOOL: '+s;sm()};
+    el.appendChild(d);
+  });
+}
+
+// ─── AUTO-RECONNECT ───
+let pingInterval=null;
+function startPing(){
+  if(pingInterval)clearInterval(pingInterval);
+  pingInterval=setInterval(()=>{
+    fetch('/api/health').then(r=>r.json()).then(d=>{
+      setStatus(true,'Online · '+ (d.tools_count||'80+')+' Tools');
+    }).catch(()=>{setStatus(false,'Offline')});
+  },10000);
+}
+
+// ─── NAV HIGHLIGHT ───
+let navObserver=null;
+function startNavObserve(){
+  const sections=document.querySelectorAll('section[id]');
+  const links=document.querySelectorAll('.nl a[href^="#"]');
+  if(!sections.length)return;
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.style.color='');
+        const link=document.querySelector(`.nl a[href="#${e.target.id}"]`);
+        if(link)link.style.color='var(--ac2)';
+      }
+    });
+  },{threshold:0.3});
+  sections.forEach(s=>obs.observe(s));
+  navObserver=obs;
+}
+
+// ─── MESSAGE RETRY ───
+function addRetry(msgEl,text){
+  const rt=document.createElement('button');rt.className='rt';
+  rt.innerHTML='<i class="fas fa-redo"></i> Erneut senden';
+  rt.onclick=()=>{msgEl.remove();document.getElementById('inp').value=text;sm()};
+  const bb=msgEl.querySelector('.bb');if(bb)bb.appendChild(rt);
+}
+
+// ─── AUTO-START ───
+function ai(){
+  setStatus(null,'Verbinde...');
+  fetch('/api/health').then(r=>r.json()).then(d=>{
+    setStatus(true,'Online · '+ (d.tools_count||'80+')+' Tools');
+    if(!autoStarted){autoStarted=true;
+      setTimeout(()=>{
+        am('user','Hallo! Was kannst du alles?');
+        setTimeout(()=>{
+          am('bot','**Klausy** – KI-Assistent mit über 80 Tools.<br><br>' +
+          'Ich unterstütze dich bei:<br>' +
+          '• Wetter, Zeit & Datum<br>' +
+          '• Websuche, Seitenanalyse & Link-Extraktion<br>' +
+          '• Produktpreise & Währungsumrechnung<br>' +
+          '• Länderinformationen & Geodaten<br>' +
+          '• Quiz, Rätsel & Würfel<br>' +
+          '• Witze, Bilder & Zitate<br>' +
+          '• GitHub, Base64, Hash & JSON<br>' +
+          '• Passwörter, UUID, Einheiten & mehr<br><br>' +
+          'Verwende <code>TOOL: NAME &lt;param&gt;</code> für gezielte Befehle<br>' +
+          'oder stelle mir einfach eine Frage.');
+        },400);
+      },1200);}
+  }).catch(()=>{setStatus(false,'Offline');setTimeout(ai,3000)});
+}
+
+// ─── SCROLL ANIMATION ───
+let scrollObs=null;
+function startScrollAnim(){
+  const els=document.querySelectorAll('section.sec, section.he');
+  if(!els.length)return;
+  els.forEach(el=>el.classList.add('sc-in'));
+  scrollObs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('sh');scrollObs.unobserve(e.target)}});
+  },{threshold:.05});
+  els.forEach(el=>scrollObs.observe(el));
+  // Bereits sichtbare sofort einblenden
+  setTimeout(()=>els.forEach(el=>{const r=el.getBoundingClientRect();if(r.top<window.innerHeight)el.classList.add('sh')}),100);
+}
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded',()=>{window.scrollTo(0,0);bt();bq();bs();bqChips();setTimeout(ai,400);setTimeout(startPing,2000);setTimeout(startNavObserve,1000);setTimeout(startScrollAnim,500)});
+</script>
+</body>
+</html>

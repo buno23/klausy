@@ -1,0 +1,35 @@
+# ─── 📁 Projekt-Root: API-Keys & Secrets ───
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+*.pem
+
+# ─── 📁 Memorys: Chat-Verläufe & gespeicherte Infos ───
+Memorys/
+!Memorys/.gitkeep
+
+# ─── 📁 Webseite: Passwort & Konfiguration ───
+Webseite/.webpass
+Webseite/.htaccess
+
+# ─── 📁 Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ─── 📁 IDE / OS ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── 📁 Logs ───
+*.log
