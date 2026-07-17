@@ -150,6 +150,7 @@ function login(){
   .then(r=>r.json()).then(d=>{if(d.ok)location.reload();else document.getElementById('err').style.display='block'})
   .catch(()=>document.getElementById('err').style.display='block');
 }
+window.addEventListener('load',function(){setTimeout(function(){document.getElementById('pw').focus()},100)});
 </script>
 </body>
 </html>"""
