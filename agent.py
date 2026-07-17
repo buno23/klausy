@@ -1932,8 +1932,9 @@ def deep_research(topic):
     if not topic or topic == raw_topic:
         topic = raw_topic
 
-    # 1. DuckDuckGo-Suche
+    # 1. DuckDuckGo-Suche + Fallback
     result_urls = []
+    search_sources = []
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
         resp = requests.get(
@@ -1945,8 +1946,43 @@ def deep_research(topic):
         if resp.encoding and resp.encoding.lower() != "utf-8":
             resp.encoding = resp.apparent_encoding
         result_urls = _extract_ddg_result_links(resp.text)
+        if result_urls:
+            search_sources.append("DuckDuckGo")
     except Exception:
         pass
+
+    # Fallback 1: Falls DuckDuckGo keine Ergebnisse liefert -> Wikipedia direkt
+    if not result_urls:
+        for lang in ("de", "en"):
+            for wt in (topic, topic.lower().replace(" ", "_")):
+                try:
+                    wiki_url = f"https://{lang}.wikipedia.org/wiki/{quote(wt)}"
+                    raw = browse_url(wiki_url)
+                    if not raw.startswith("Fehler") and len(raw) > 200:
+                        result_urls.append(wiki_url)
+                        search_sources.append(f"Wikipedia ({lang})")
+                        break
+                except Exception:
+                    continue
+            if result_urls:
+                break
+
+    # Fallback 2: Google Cache / Textise dot iitty
+    if not result_urls:
+        try:
+            fallback = safe_fetch(f"https://lite.duckduckgo.com/lite/?q={quote(topic)}")
+            if fallback and "Fehler" not in str(fallback):
+                alt_links = re.findall(r'uddg=(https?%3A[^&"\']+)', str(fallback))
+                if not alt_links:
+                    alt_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', str(fallback))
+                for link in alt_links:
+                    decoded = unquote(link) if "%" in link else link
+                    if decoded not in result_urls:
+                        result_urls.append(decoded)
+                if alt_links:
+                    search_sources.append("DuckDuckGo (Lite)")
+        except Exception:
+            pass
 
     # 2. Webseiten browsen (Top 4)
     collected_texts = []
@@ -1958,25 +1994,30 @@ def deep_research(topic):
         except Exception:
             continue
 
-    # 3. Wikipedia
+    # 3. Wikipedia (falls nicht schon passiert)
     wiki_text = ""
-    for lang in ("de", "en"):
-        try:
-            wt = topic.replace(" ", "_")
-            raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
-            if raw.startswith("Fehler"):
-                raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(topic.lower().replace(' ', '_'))}")
-            if not raw.startswith("Fehler"):
-                wiki_text = raw[:800]
-                break
-        except Exception:
-            continue
+    if not any("wikipedia" in u.lower() for u in result_urls):
+        for lang in ("de", "en"):
+            try:
+                wt = topic.replace(" ", "_")
+                raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
+                if raw.startswith("Fehler"):
+                    raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(topic.lower().replace(' ', '_'))}")
+                if not raw.startswith("Fehler"):
+                    wiki_text = raw[:800]
+                    break
+            except Exception:
+                continue
 
     if wiki_text:
         collected_texts.insert(0, f"[Wikipedia]: {wiki_text}")
 
     # 4. Mit KI zusammenfassen
+    source_info = ", ".join(search_sources) if search_sources else "keine"
     summary = _summarize_research(topic, collected_texts, result_urls)
+    # Quellen-Info voranstellen
+    if search_sources:
+        summary = f"🔍 **Quellen:** {source_info}\n\n{summary}"
     return summary
 
 
