@@ -1879,9 +1879,44 @@ def _extract_ddg_result_links(html):
     return urls
 
 
+def _optimize_search_query(raw_query):
+    """KI optimiert den Suchbegriff für bessere Suchergebnisse."""
+    try:
+        resp = client.chat.completions.create(
+            model="gemma-4-31b-it",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Du verbesserst Suchanfragen für eine Websuche. "
+                        "Gib NUR den verbesserten Suchbegriff zurück, maximal 10 Wörter, "
+                        "in derselben Sprache wie die Anfrage. "
+                        "Erweitere sinnvoll: ergänze fehlende Fachbegriffe, präzisiere vage Formulierungen. "
+                        "Keine Erklärungen, kein Präfix, kein Fließtext – nur der Suchbegriff."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"Optimieren für Websuche: {raw_query}",
+                },
+            ],
+            temperature=0.2,
+            max_tokens=50,
+            timeout=10,
+        )
+        optimized = resp.choices[0].message.content.strip().strip('"').strip("'")
+        # Nur verwenden wenn sinnvoll (nicht zu lang, nicht leer)
+        if optimized and len(optimized) > 5 and len(optimized) < 100:
+            return optimized
+    except Exception:
+        pass
+    return raw_query
+
+
 def deep_research(topic):
     """
     Mehrstufige, tiefgreifende Recherche:
+    0. KI optimiert den Suchbegriff
     1. DuckDuckGo-Suche -> Top-Ergebnis-Links extrahieren
     2. Alle Top-Seiten browsen + Inhalt extrahieren
     3. Wikipedia (DE) abrufen
@@ -1890,7 +1925,12 @@ def deep_research(topic):
     if not topic or not topic.strip():
         return "❌ Bitte gib ein Thema für die Recherche an."
 
-    topic = topic.strip()
+    raw_topic = topic.strip()
+
+    # 0. KI optimiert den Suchbegriff
+    topic = _optimize_search_query(raw_topic)
+    if not topic or topic == raw_topic:
+        topic = raw_topic
 
     # 1. DuckDuckGo-Suche
     result_urls = []
