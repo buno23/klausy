@@ -187,7 +187,7 @@ def auth():
     pw = data.get("pw", "")
     if check_password(pw):
         resp = jsonify({"ok": True})
-        resp.set_cookie(AUTH_COOKIE, pw, max_age=86400*7, httponly=True, samesite="Lax")
+        resp.set_cookie(AUTH_COOKIE, pw, max_age=None, httponly=True, samesite="Lax")
         return resp
     return jsonify({"ok": False})
 
