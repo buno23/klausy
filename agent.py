@@ -2012,7 +2012,7 @@ def deep_research(topic):
         collected_texts.append(f"[Wikipedia]: {wiki_text}")
 
     browse_threads = []
-    browse_count = min(len(result_urls), 2)
+    browse_count = min(len(result_urls), 3)
     browse_results = [None] * browse_count
 
     def _browse(idx, url):
