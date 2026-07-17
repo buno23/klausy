@@ -14,10 +14,15 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir
 
 
 def html_to_text(html):
-    html = re.sub(r"(?is)<(script|style).*?>.*?</\1>", "", html)
+    # Navigations- und Cookie-Hinweise entfernen
+    html = re.sub(r"(?is)<(script|style|nav|footer|header).*?>.*?</\1>", "", html)
+    # Cookie-Banner und Popups
+    html = re.sub(r"(?is)<div[^>]*(cookie|banner|modal|overlay)[^>]*>.*?</div>", "", html)
+    html = re.sub(r"(?is)<aside[^>]*>.*?</aside>", "", html)
     text = re.sub(r"<[^>]+>", "", html)
     text = unescape(text)
     text = re.sub(r"\s+", " ", text)
+    return text.strip()
     return text.strip()
 
 
@@ -172,6 +177,9 @@ def browse_url(url):
             headers={"User-Agent": "Mozilla/5.0"},
         )
         response.raise_for_status()
+        # Encoding erkennen – wichtig für Umlaute (ä, ö, ü, ß)
+        if response.encoding and response.encoding.lower() != "utf-8":
+            response.encoding = response.apparent_encoding
         return html_to_text(response.text)
     except Exception as e:
         return f"Fehler beim Öffnen der URL: {e}"
@@ -1851,120 +1859,114 @@ def deep_research(topic):
     Mehrstufige, tiefgreifende Recherche:
     1. DuckDuckGo-Suche -> Top-Ergebnis-Links extrahieren
     2. Alle Top-Seiten browsen + Inhalt extrahieren
-    3. Wikipedia (DE + EN) abrufen
-    4. Alle Quellen vergleichen und strukturiert ausgeben
+    3. Wikipedia (DE) abrufen
+    4. Per KI zusammenfassen & strukturiert ausgeben
     """
     if not topic or not topic.strip():
-        return "Bitte gib ein Thema fuer die Recherche an."
+        return "❌ Bitte gib ein Thema für die Recherche an."
 
     topic = topic.strip()
-    lines_out = []
-    lines_out.append("=" * 64)
-    lines_out.append("*** TIEFGREIFENDE RECHERCHE ***")
-    lines_out.append(f"    Thema: {topic}")
-    lines_out.append("=" * 64)
 
-    # 1. DuckDuckGo-Suche + Link-Extraktion
-    lines_out.append("\n[SCHRITT 1: Websuche (DuckDuckGo)]")
-
+    # 1. DuckDuckGo-Suche
     result_urls = []
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
         resp = requests.get(
             "https://html.duckduckgo.com/html/",
             params={"q": topic, "kl": "de-de"},
-            headers=headers,
-            timeout=15,
+            headers=headers, timeout=15,
         )
         resp.raise_for_status()
-        raw_html = resp.text
-        result_urls = _extract_ddg_result_links(raw_html)
-        for i, url in enumerate(result_urls[:8], 1):
-            short = url[:90] + "..." if len(url) > 90 else url
-            lines_out.append(f"  {i}. {short}")
-    except Exception as e:
-        lines_out.append(f"  Fehler bei der Websuche: {e}")
+        if resp.encoding and resp.encoding.lower() != "utf-8":
+            resp.encoding = resp.apparent_encoding
+        result_urls = _extract_ddg_result_links(resp.text)
+    except Exception:
+        pass
 
-    lines_out.append(f"\n  => {len(result_urls)} Ergebnis-Links gefunden")
-
-    # 2. Webseiten browsen (Top 5)
-    lines_out.append("\n[SCHRITT 2: Webseiten-Analyse]")
-
-    browsed_content = {}
-    for idx, url in enumerate(result_urls[:5], 1):
-        short = url[:70] + "..." if len(url) > 70 else url
-        lines_out.append(f"\n  Seite {idx}: {short}")
+    # 2. Webseiten browsen (Top 4)
+    collected_texts = []
+    for url in result_urls[:4]:
         try:
             content = browse_url(url)
-            if content.startswith("Fehler"):
-                lines_out.append(f"  [WARN] {content}")
-                continue
-            # Nur die ersten 400 Zeichen
-            content = content[:400].rsplit(" ", 1)[0] + " [...]" if len(content) > 400 else content
-            lines_out.append(f"  {content}")
-            browsed_content[url] = content
-        except Exception as e:
-            lines_out.append(f"  [WARN] Fehler: {e}")
-
-    # 3. Wikipedia
-    lines_out.append("\n[SCHRITT 3: Wikipedia]")
-
-    wiki_found = False
-    # Nur deutsche Wikipedia (kein Englisch – ggf. uebersetzen)
-    for lang in ("de", "en"):
-        wiki_title = topic.replace(" ", "_")
-        wiki_url = f"https://{lang}.wikipedia.org/wiki/{quote(wiki_title)}"
-        try:
-            wiki_raw = browse_url(wiki_url)
-            if wiki_raw.startswith("Fehler"):
-                alt_title = topic.lower().replace(" ", "_")
-                wiki_url2 = f"https://{lang}.wikipedia.org/wiki/{quote(alt_title)}"
-                wiki_raw = browse_url(wiki_url2)
-            if not wiki_raw.startswith("Fehler"):
-                lines_out.append(f"\n  Wikipedia ({lang}): {wiki_url}")
-                wiki_lines = [w for w in wiki_raw.splitlines() if w.strip() and len(w.strip()) > 30]
-                content_lines = wiki_lines[:20]
-                if content_lines:
-                    text_block = "\n".join(content_lines[:15])
-                    if len(text_block) > 600:
-                        text_block = text_block[:600].rsplit(" ", 1)[0] + " [...]"
-                    lines_out.append(f"  {text_block}")
-                    browsed_content[f"Wikipedia ({lang})"] = text_block
-                    wiki_found = True
-                    break
+            if not content.startswith("Fehler") and len(content) > 100:
+                collected_texts.append(content[:600])
         except Exception:
             continue
 
-    if not wiki_found:
-        lines_out.append("Kein Wikipedia-Artikel gefunden.")
+    # 3. Wikipedia
+    wiki_text = ""
+    for lang in ("de", "en"):
+        try:
+            wt = topic.replace(" ", "_")
+            raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(wt)}")
+            if raw.startswith("Fehler"):
+                raw = browse_url(f"https://{lang}.wikipedia.org/wiki/{quote(topic.lower().replace(' ', '_'))}")
+            if not raw.startswith("Fehler"):
+                wiki_text = raw[:800]
+                break
+        except Exception:
+            continue
 
-    # 4. Synthese / Quellen-Vergleich
-    lines_out.append("\n" + "=" * 64)
-    lines_out.append("*** SYNTHESE & QUELLENVERGLEICH ***")
+    if wiki_text:
+        collected_texts.insert(0, f"[Wikipedia]: {wiki_text}")
 
-    lines_out.append(f"""
-Quellen: {len(result_urls)} gefunden, {len(browsed_content)} gelesen{' (inkl. Wikipedia)' if wiki_found else ''}.
-""")
-    for i, url in enumerate(result_urls[:5], 1):
-        short = url[:80] + "..." if len(url) > 80 else url
-        status = "[OK]" if url in browsed_content else "[FAIL]"
-        lines_out.append(f"  {i}. {status} {short}")
-    if wiki_found:
-        lines_out.append(f"  W. [OK] Wikipedia")
+    # 4. Mit KI zusammenfassen
+    summary = _summarize_research(topic, collected_texts, result_urls)
+    return summary
 
-    lines_out.append(f"""
-[ERGEBNIS] zu: {topic}
 
-Die obigen Informationen stammen aus {len(browsed_content)} verschiedenen Quellen.
-Die DuckDuckGo-Suche lieferte die Suchergebnisse, die eingelesenen Seiten
-enthalten die Detailinformationen, und Wikipedia bietet eine strukturierte
-Enzyklopaedie-Perspektive.
+def _summarize_research(topic, texts, urls):
+    """Fasse die gesammelten Recherche-Inhalte per KI zusammen."""
+    if not texts:
+        return f"🔍 Zur **{topic}** konnte ich leider keine Quellen finden.\n\nVersuche es mit einem anderen Suchbegriff oder nutze `TOOL: SEARCH {topic}`."
 
-[HINWEIS]:
-Du kannst die Analyse vertiefen, indem du spezifischere Aspekte des Themas
-nachfragst oder einzelne Quellen gezielt mit !tool browse <URL> aufrufst.""")
+    # Rohdaten kürzen (max 4000 Zeichen fürs LLM)
+    raw = "\n---\n".join(t for t in texts if t)
+    if len(raw) > 4000:
+        raw = raw[:4000].rsplit(" ", 1)[0] + " [...]"
 
-    return "\n".join(lines_out)
+    try:
+        resp = client.chat.completions.create(
+            model="gemma-4-31b-it",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Du bist ein Recherche-Assistent. Fasse die folgenden Informationen "
+                        "zum Thema des Users strukturiert zusammen.\n\n"
+                        "Regeln:\n"
+                        "- Schreibe in DER SELBEN SPRACHE wie die Query des Users (Deutsch)\n"
+                        "- Verwende **fette Überschriften** und bullet points\n"
+                        "- Struktur: 1) Kurze Zusammenfassung (2-3 Sätze), 2) Wichtigste Punkte (bullet), "
+                        "3) Quellen (als Liste)\n"
+                        "- Maximal 500 Zeichen für die Zusammenfassung\n"
+                        "- Bleibe sachlich und faktenbasiert\n"
+                        "- Nur Informationen verwenden, die in den Quellen stehen"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"Thema: {topic}\n\nGefundene Informationen:\n{raw}",
+                },
+            ],
+            temperature=0.3,
+            max_tokens=800,
+            timeout=20,
+        )
+        summary = resp.choices[0].message.content.strip()
+    except Exception as e:
+        # Fallback: Rohdaten anzeigen
+        summary = f"**🔍 Recherche zu: {topic}**\n\n"
+        for i, t in enumerate(texts[:3], 1):
+            summary += f"\n**Quelle {i}:**\n{t[:300]}...\n"
+
+    # Quellen anhängen
+    summary += "\n\n**📎 Quellen:**\n"
+    for i, url in enumerate(urls[:5], 1):
+        short = url[:70] + "..." if len(url) > 70 else url
+        summary += f"{i}. {short}\n"
+
+    return summary.strip()
 
 
 # ──────────────────────────────────────────
