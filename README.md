@@ -8,9 +8,6 @@
     <a href="https://klausy.onrender.com" target="_blank">
       <img src="https://img.shields.io/badge/Live-Demo-c96020?style=for-the-badge&logo=render" alt="Live Demo">
     </a>
-    <a href="https://github.com/buno23/klausy/blob/main/LICENSE">
-      <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-    </a>
     <img src="https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python" alt="Python">
     <img src="https://img.shields.io/badge/Flask-3.0-black?style=for-the-badge&logo=flask" alt="Flask">
   </p>
@@ -142,15 +139,3 @@ Oder **gezielt** mit `TOOL:`:
 - `TOOL: SEARCH Python Tutorials`
 - `TOOL: QRCODE Hallo Welt`
 - `TOOL: ADVICE`
-
----
-
-## 📄 Lizenz
-
-MIT License – siehe [LICENSE](LICENSE) für Details.
-
----
-
-<div align="center">
-  <sub>Entwickelt mit ❤️ von <strong>Buno23</strong> bei der JuniorAkademie Berlin 2026</sub>
-</div>
